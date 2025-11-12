@@ -7,6 +7,7 @@ import Materials from "../pages/Materials.tsx";
 import Transmutations from "../pages/Transmutations.tsx";
 import Audits from "../pages/Audits.tsx";
 import { useAuth } from "../context/AuthContext";
+import Register from "../pages/Register.tsx";
 
 export default function AppRouter() {
   const { token, user } = useAuth();
@@ -15,6 +16,7 @@ export default function AppRouter() {
     return (
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     );

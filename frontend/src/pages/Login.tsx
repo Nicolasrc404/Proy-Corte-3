@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // ✅ import Link
 import { useAuth } from "../context/AuthContext";
 import { apiFetch } from "../services/api";
 
@@ -30,10 +30,11 @@ export default function Login() {
         <h2 className="text-xl font-bold text-center">Iniciar Sesión</h2>
         <input
           type="email"
-          placeholder="Email"
+          placeholder="Correo electrónico"
           className="border p-2 rounded"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          required
         />
         <input
           type="password"
@@ -41,10 +42,22 @@ export default function Login() {
           className="border p-2 rounded"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          required
         />
-        <button className="bg-blue-600 text-white rounded p-2 hover:bg-blue-700">
+        <button
+          className="bg-blue-600 text-white rounded p-2 hover:bg-blue-700"
+          type="submit"
+        >
           Entrar
         </button>
+
+        {/* 🔽 Enlace al registro */}
+        <p className="text-sm text-center text-gray-600 mt-2">
+          ¿No tienes cuenta?{" "}
+          <Link to="/register" className="text-blue-600 hover:underline">
+            Regístrate
+          </Link>
+        </p>
       </form>
     </div>
   );
