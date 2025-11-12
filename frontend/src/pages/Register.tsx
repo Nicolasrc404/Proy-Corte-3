@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { apiFetch } from "../services/api";
-import { useAuth } from "../context/AuthContext";
 
 export default function Register() {
-  const { login } = useAuth();
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -13,28 +12,12 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // 1️⃣ Crear el usuario
     const res = await apiFetch("/auth/register", "POST", form);
-    if (!res?.data) {
-      alert("Error al registrar usuario");
-      return;
-    }
-
-    // 2️⃣ Iniciar sesión automáticamente
-    const loginRes = await apiFetch("/auth/login", "POST", {
-      email: form.email,
-      password: form.password,
-    });
-
-    if (loginRes?.token) {
-      const payload = JSON.parse(atob(loginRes.token.split(".")[1]));
-      login(loginRes.token, { email: payload.email, role: payload.role });
-
-      // ✅ Redirigir al Dashboard de forma explícita
-      window.location.href = "http://localhost:5173/dashboard";
+    if (res?.data) {
+      alert("Usuario registrado correctamente ✅");
+      navigate("/login");
     } else {
-      alert("Error al iniciar sesión automáticamente");
+      alert("Error al registrar usuario");
     }
   };
 
@@ -81,7 +64,6 @@ export default function Register() {
           Registrarse
         </button>
 
-        {/* Enlace hacia Login */}
         <p className="text-sm text-center text-gray-600 mt-2">
           ¿Ya tienes cuenta?{" "}
           <Link to="/login" className="text-blue-600 hover:underline">
