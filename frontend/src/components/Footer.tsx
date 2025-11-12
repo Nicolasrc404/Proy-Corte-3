@@ -6,10 +6,6 @@ export default function Footer() {
         <span className="font-semibold">Plataforma Alquímica de Amestris</span>{" "}
         — Departamento de Alquimia Estatal © {new Date().getFullYear()}
       </p>
-      <p className="text-xs text-gray-500">
-        Proyecto académico desarrollado por Nicolás Rubiano — Universidad
-        Nacional de Amestris
-      </p>
     </footer>
   );
 }
