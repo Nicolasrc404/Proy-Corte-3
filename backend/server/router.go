@@ -17,7 +17,7 @@ func (s *Server) router() http.Handler {
 	asyncReporter := s.asyncErrorReporter()
 	currentUser := currentUserExtractor
 
-	// ========== AUTH ==========
+	// * AUTH
 	authHandler := handlers.NewAuthHandler(
 		s.GetJWTSecret(),
 		s.UserRepository,
@@ -29,8 +29,7 @@ func (s *Server) router() http.Handler {
 	router.HandleFunc("/auth/register", authHandler.Register).Methods(http.MethodPost)
 	router.HandleFunc("/auth/login", authHandler.Login).Methods(http.MethodPost)
 
-	// ========== ALCHEMISTS ==========
-	// Se registran solo si el repo está disponible (tu mismo patrón)
+	// * ALCHEMISTS
 	if s.AlchemistRepository != nil {
 		alchHandler := handlers.NewAlchemistHandler(
 			s.AlchemistRepository,
@@ -64,7 +63,7 @@ func (s *Server) router() http.Handler {
 			s.AuthMiddleware("supervisor")(http.HandlerFunc(alchHandler.Delete)),
 		).Methods(http.MethodDelete)
 
-		// ======== MISSIONS ========
+		// * MISSIONS
 		if s.MissionRepository != nil {
 			mh := handlers.NewMissionHandler(
 				s.MissionRepository,
@@ -86,7 +85,7 @@ func (s *Server) router() http.Handler {
 				s.AuthMiddleware("supervisor")(http.HandlerFunc(mh.Create)),
 			).Methods(http.MethodPost)
 			router.Handle("/missions/{id}",
-				s.AuthMiddleware("supervisor")(http.HandlerFunc(mh.Edit)), // <- NUEVO PUT
+				s.AuthMiddleware("supervisor")(http.HandlerFunc(mh.Edit)),
 			).Methods(http.MethodPut)
 			router.Handle("/missions/{id}/status",
 				s.AuthMiddleware("alchemist", "supervisor")(http.HandlerFunc(mh.UpdateStatus)),
@@ -96,7 +95,7 @@ func (s *Server) router() http.Handler {
 			).Methods(http.MethodDelete)
 		}
 
-		// ======== TRANSMUTATIONS ========
+		// * TRANSMUTATIONS
 		if s.TransmutationRepository != nil {
 			transHandler := handlers.NewTransmutationHandler(
 				s.TransmutationRepository,
@@ -124,7 +123,7 @@ func (s *Server) router() http.Handler {
 
 			router.Handle(
 				"/transmutations/{id}",
-				s.AuthMiddleware("supervisor")(http.HandlerFunc(transHandler.Edit)), // ✅ nuevo PUT
+				s.AuthMiddleware("supervisor")(http.HandlerFunc(transHandler.Edit)),
 			).Methods(http.MethodPut)
 
 			router.Handle(
@@ -133,7 +132,7 @@ func (s *Server) router() http.Handler {
 			).Methods(http.MethodDelete)
 		}
 
-		// ======== MATERIALS ========
+		// * MATERIALS
 		if s.MaterialRepository != nil {
 			matHandler := handlers.NewMaterialHandler(
 				s.MaterialRepository,
@@ -155,14 +154,14 @@ func (s *Server) router() http.Handler {
 				s.AuthMiddleware("supervisor")(http.HandlerFunc(matHandler.Create)),
 			).Methods(http.MethodPost)
 			router.Handle("/materials/{id}",
-				s.AuthMiddleware("supervisor")(http.HandlerFunc(matHandler.Edit)), // ✅ nuevo PUT
+				s.AuthMiddleware("supervisor")(http.HandlerFunc(matHandler.Edit)),
 			).Methods(http.MethodPut)
 			router.Handle("/materials/{id}",
 				s.AuthMiddleware("supervisor")(http.HandlerFunc(matHandler.Delete)),
 			).Methods(http.MethodDelete)
 		}
 
-		// ======== AUDITS ========
+		// * AUDITS
 		if s.AuditRepository != nil {
 			auditHandler := handlers.NewAuditHandler(
 				s.AuditRepository,

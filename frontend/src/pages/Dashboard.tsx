@@ -129,7 +129,12 @@ export default function Dashboard() {
   const loadMissions = async () => {
     if (!token) return;
     try {
-      const data = await apiFetch("/missions", "GET", undefined, token);
+      const data = await apiFetch<Mission[]>(
+        "/missions",
+        "GET",
+        undefined,
+        token
+      );
       setMissions(data ?? []);
     } catch (err) {
       console.error("Error loading missions", err);
@@ -139,7 +144,12 @@ export default function Dashboard() {
   const loadMaterials = async () => {
     if (!token) return;
     try {
-      const data = await apiFetch("/materials", "GET", undefined, token);
+      const data = await apiFetch<Material[]>(
+        "/materials",
+        "GET",
+        undefined,
+        token
+      );
       setMaterials(data ?? []);
     } catch (err) {
       console.error("Error loading materials", err);
@@ -149,7 +159,12 @@ export default function Dashboard() {
   const loadTransmutations = async () => {
     if (!token) return;
     try {
-      const data = await apiFetch("/transmutations", "GET", undefined, token);
+      const data = await apiFetch<Transmutation[]>(
+        "/transmutations",
+        "GET",
+        undefined,
+        token
+      );
       setTransmutations(data ?? []);
     } catch (err) {
       console.error("Error loading transmutations", err);
@@ -159,7 +174,7 @@ export default function Dashboard() {
   const loadAudits = async () => {
     if (!token || user?.role !== "supervisor") return;
     try {
-      const data = await apiFetch("/audits", "GET", undefined, token);
+      const data = await apiFetch<Audit[]>("/audits", "GET", undefined, token);
       setAudits(data ?? []);
     } catch (err) {
       console.error("Error loading audits", err);
@@ -169,7 +184,12 @@ export default function Dashboard() {
   const loadAlchemists = async () => {
     if (!token || user?.role !== "supervisor") return;
     try {
-      const data = await apiFetch("/alchemists", "GET", undefined, token);
+      const data = await apiFetch<Alchemist[]>(
+        "/alchemists",
+        "GET",
+        undefined,
+        token
+      );
       setAlchemists(data ?? []);
     } catch (err) {
       console.error("Error loading alchemists", err);
@@ -188,7 +208,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, user?.role]);
 
   useEffect(() => {
@@ -229,7 +248,6 @@ export default function Dashboard() {
     return () => {
       source.close();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, user?.role]);
 
   const missionStatusData = useMemo(() => {

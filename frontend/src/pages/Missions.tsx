@@ -44,7 +44,12 @@ export default function Missions() {
   const loadData = async () => {
     if (!token) return;
     try {
-      const res = await apiFetch("/missions", "GET", undefined, token);
+      const res = await apiFetch<Mission[]>(
+        "/missions",
+        "GET",
+        undefined,
+        token
+      );
       setMissions(res || []);
       setStatusDrafts({});
     } catch (err) {
@@ -54,7 +59,6 @@ export default function Missions() {
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const resetForm = () => {

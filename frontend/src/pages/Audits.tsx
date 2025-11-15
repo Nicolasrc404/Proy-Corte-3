@@ -12,13 +12,12 @@ export default function Audits() {
 
   const loadAudits = async () => {
     if (!token) return;
-    const res = await apiFetch("/audits", "GET", undefined, token);
+    const res = await apiFetch<Audit[]>("/audits", "GET", undefined, token);
     setAudits(res || []);
   };
 
   useEffect(() => {
     loadAudits();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   useEffect(() => {
@@ -46,7 +45,6 @@ export default function Audits() {
     return () => {
       source.close();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   return (

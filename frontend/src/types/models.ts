@@ -1,6 +1,4 @@
-// ===============================
-// 🔐 Autenticación
-// ===============================
+// * Authentication
 
 export interface User {
   id: number;
@@ -10,9 +8,7 @@ export interface User {
   role: "alchemist" | "supervisor";
 }
 
-// ===============================
-// ⚗️ Alchemist
-// ===============================
+// * Alchemist
 
 export interface Alchemist {
   id?: number;
@@ -23,9 +19,7 @@ export interface Alchemist {
   created_at?: string;
 }
 
-// ===============================
-// 🎯 Mission
-// ===============================
+// * Mission
 
 export interface Mission {
   id?: number;
@@ -33,13 +27,11 @@ export interface Mission {
   description: string;
   difficulty: "baja" | "media" | "alta" | string;
   status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "ARCHIVED" | string;
-  assigned_to: number; // id del alquimista
+  assigned_to: number;
   created_at?: string;
 }
 
-// ===============================
-// ⚙️ Material
-// ===============================
+// * Material
 
 export interface Material {
   id?: number;
@@ -49,9 +41,7 @@ export interface Material {
   created_at?: string;
 }
 
-// ===============================
-// 🔮 Transmutation
-// ===============================
+// *Transmutation
 
 export interface Transmutation {
   id?: number;
@@ -65,14 +55,11 @@ export interface Transmutation {
   updated_at?: string;
 }
 
-// ===============================
-// 🕵️ Audit
-// ===============================
-
+// * Audit
 export interface Audit {
   id?: number;
   action: string;
-  entity: string; // nombre de la entidad afectada
+  entity: string;
   entity_id: number;
   user_email: string;
   details?: string;

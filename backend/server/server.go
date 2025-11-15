@@ -26,14 +26,26 @@ type Server struct {
 	Handler                 http.Handler
 	UserRepository          repository.UserRepository
 	AlchemistRepository     *repository.AlchemistRepository
-	MissionRepository       *repository.MissionRepository       // ✅ CRUD Missions
-	MaterialRepository      *repository.MaterialRepository      // CRUD Materials
-	TransmutationRepository *repository.TransmutationRepository // CRUD Transmutations
-	AuditRepository         *repository.AuditRepository         // CRUD Audits
+	MissionRepository       *repository.MissionRepository
+	MaterialRepository      *repository.MaterialRepository
+	TransmutationRepository *repository.TransmutationRepository
+	AuditRepository         *repository.AuditRepository
 	jwtSecret               string
 	logger                  *logger.Logger
 	taskQueue               *TaskQueue
 	eventHub                *EventHub
+}
+
+type welcomePayload struct {
+	Role  string `json:"role"`
+	Email string `json:"email"`
+	Name  string `json:"name"`
+}
+
+type welcomeMessage struct {
+	Type      string         `json:"type"`
+	Payload   welcomePayload `json:"payload"`
+	Timestamp string         `json:"timestamp"`
 }
 
 // NewServer inicializa la instancia del servidor.
@@ -115,11 +127,11 @@ func (s *Server) initDB() {
 
 	fmt.Println("Aplicando migraciones...")
 
-	// 🔹 Migraciones (sin borrar datos previos)
+	// Migraciones (sin borrar datos previos)
 	err := s.DB.AutoMigrate(
 		&models.User{},
 		&models.Alchemist{},
-		&models.Mission{}, // ✅ Importante para CRUD Missions
+		&models.Mission{},
 		&models.Material{},
 		&models.Transmutation{},
 		&models.Audit{},
@@ -128,14 +140,55 @@ func (s *Server) initDB() {
 		s.logger.Fatal(err)
 	}
 
-	// 🔹 Inicializar repositorios
+	if s.Config.Database == "postgres" {
+		s.loadSeedData()
+	}
+
+	// Inicializar repositorios
 	s.UserRepository = repository.NewUserRepository(s.DB)
 	s.AlchemistRepository = repository.NewAlchemistRepository(s.DB)
-	s.MissionRepository = repository.NewMissionRepository(s.DB) // ✅
+	s.MissionRepository = repository.NewMissionRepository(s.DB)
 	s.MaterialRepository = repository.NewMaterialRepository(s.DB)
 	s.TransmutationRepository = repository.NewTransmutationRepository(s.DB)
 	s.AuditRepository = repository.NewAuditRepository(s.DB)
 }
+
+func (s *Server) loadSeedData() {
+	envPath := os.Getenv("INIT_SQL_PATH")
+	candidates := []string{}
+	if envPath != "" {
+		candidates = append(candidates, envPath)
+	} else {
+		candidates = append(candidates, "init.sql", "../init.sql", "../../init.sql")
+	}
+
+	var (
+		contents []byte
+		readPath string
+		err      error
+	)
+
+	for _, candidate := range candidates {
+		contents, err = os.ReadFile(candidate)
+		if err == nil {
+			readPath = candidate
+			break
+		}
+	}
+
+	if readPath == "" {
+		s.logger.Printf("unable to read seed file from %v: %v", candidates, err)
+		return
+	}
+
+	if execErr := s.DB.Exec(string(contents)).Error; execErr != nil {
+		s.logger.Printf("failed to execute seed data from %s: %v", readPath, execErr)
+		return
+	}
+
+	s.logger.Printf("seed data applied from %s", readPath)
+}
+
 func (s *Server) initAsyncInfrastructure() error {
 	redisAddr := s.Config.RedisAddress
 	if redisAddr == "" {
@@ -196,14 +249,14 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	client := s.eventHub.Subscribe()
 	defer s.eventHub.Unsubscribe(client)
 
-	welcome := map[string]any{
-		"type": "connection",
-		"payload": map[string]any{
-			"role":  claims.Role,
-			"email": claims.Email,
-			"name":  claims.Name,
+	welcome := welcomeMessage{
+		Type: "connection",
+		Payload: welcomePayload{
+			Role:  claims.Role,
+			Email: claims.Email,
+			Name:  claims.Name,
 		},
-		"timestamp": time.Now().UTC().Format(time.RFC3339),
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}
 	if data, err := json.Marshal(welcome); err == nil {
 		fmt.Fprintf(w, "data: %s\n\n", data)

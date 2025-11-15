@@ -265,7 +265,7 @@ func (h *TransmutationHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.Broadcast != nil {
-		h.Broadcast("transmutation.deleted", map[string]any{"id": t.ID})
+		h.Broadcast("transmutation.deleted", map[string]interface{}{"id": t.ID})
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -336,6 +336,6 @@ func (h *TransmutationHandler) Edit(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	json.NewEncoder(w).Encode(map[string]any{"data": resp})
+	json.NewEncoder(w).Encode(map[string]interface{}{"data": resp})
 	h.Log(http.StatusAccepted, r.URL.Path, start)
 }

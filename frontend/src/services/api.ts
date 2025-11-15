@@ -1,11 +1,11 @@
 import { API_URL } from "../config";
 
-export async function apiFetch(
+export async function apiFetch<TResponse = unknown, TBody = unknown>(
   path: string,
   method = "GET",
-  body?: any,
+  body?: TBody,
   token?: string
-) {
+): Promise<TResponse | null> {
   const res = await fetch(`${API_URL}${path}`, {
     method,
     headers: {
@@ -28,5 +28,9 @@ export async function apiFetch(
     throw new Error(message);
   }
 
-  return typeof data === "string" ? data : data.data ?? data;
+  if (typeof data === "string") {
+    return data as unknown as TResponse;
+  }
+
+  return (data.data ?? data) as TResponse;
 }

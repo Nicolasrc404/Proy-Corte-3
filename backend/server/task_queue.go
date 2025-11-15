@@ -47,9 +47,7 @@ type EventBroadcaster interface {
 	Broadcast(eventType string, payload interface{})
 }
 
-// TaskQueue orchestrates all background work for the application. It provides
-// helpers for HTTP handlers to enqueue jobs and executes them in a dedicated
-// worker that relies on Redis for coordination.
+// TaskQueue coordina todo el trabajo en segundo plano de la aplicación.
 type TaskQueue struct {
 	redis              *RedisClient
 	logger             *logger.Logger
@@ -115,7 +113,7 @@ func (q *TaskQueue) broadcast(eventType string, payload interface{}) {
 	}
 }
 
-// Start spins up the worker that consumes jobs from Redis.
+// Start arranca el worker que consume trabajos desde Redis.
 func (q *TaskQueue) Start() error {
 	if q.started {
 		return nil
@@ -128,7 +126,7 @@ func (q *TaskQueue) Start() error {
 	return nil
 }
 
-// Stop gracefully cancels the worker and ticker.
+// Stop detiene de forma ordenada el worker y el ticker.
 func (q *TaskQueue) Stop() {
 	q.cancel()
 	if q.verificationTicker != nil {
@@ -136,7 +134,7 @@ func (q *TaskQueue) Stop() {
 	}
 }
 
-// ScheduleDailyVerification enqueues verification jobs at the configured interval.
+// ScheduleDailyVerification programa trabajos de verificación en el intervalo configurado.
 func (q *TaskQueue) ScheduleDailyVerification() {
 	if !q.started {
 		return
@@ -161,13 +159,13 @@ func (q *TaskQueue) ScheduleDailyVerification() {
 	}()
 }
 
-// EnqueueTransmutationProcessing schedules the heavy processing of a transmutation.
+// EnqueueTransmutationProcessing programa el procesamiento pesado de una transmutación.
 func (q *TaskQueue) EnqueueTransmutationProcessing(transmutationID uint, requestedBy string) error {
 	payload := processTransmutationPayload{TransmutationID: transmutationID, RequestedBy: requestedBy}
 	return q.enqueue(taskTypeProcessTransmutation, payload)
 }
 
-// EnqueueAudit registers an audit asynchronously so handlers do not block on DB writes.
+// EnqueueAudit registra una auditoría de forma asíncrona para que los handlers no se bloqueen en escrituras a la base de datos.
 func (q *TaskQueue) EnqueueAudit(action, entity string, entityID uint, userEmail, details string) error {
 	payload := registerAuditPayload{
 		Action:    action,
@@ -429,7 +427,7 @@ func (q *TaskQueue) recordWorkerError(taskType string, cause error) {
 	q.broadcast("audit.created", auditToResponse(saved))
 }
 
-// asyncErrorReporter creates a helper that handlers can use to report async issues.
+// asyncErrorReporter crea un ayudante que los controladores pueden utilizar para informar de problemas asíncronos.
 func (s *Server) asyncErrorReporter() func(path string, err error) {
 	return func(path string, err error) {
 		if err == nil {

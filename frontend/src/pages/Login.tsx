@@ -2,6 +2,16 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { apiFetch } from "../services/api";
+import type { User } from "../types/models";
+
+interface LoginResponse {
+  token: string;
+  id: number;
+  name: string;
+  email: string;
+  specialty?: string;
+  role: User["role"];
+}
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -16,7 +26,10 @@ export default function Login() {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiFetch("/auth/login", "POST", { email, password });
+      const res = await apiFetch<LoginResponse>("/auth/login", "POST", {
+        email,
+        password,
+      });
       if (!res?.token) {
         throw new Error("Respuesta inválida del servidor");
       }

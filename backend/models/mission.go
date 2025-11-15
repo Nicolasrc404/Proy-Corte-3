@@ -8,7 +8,7 @@ type Mission struct {
 	Description string
 	Difficulty  string
 	Status      string `gorm:"size:32;default:PENDING"`
-	AssignedTo  uint   // Alchemist ID
+	AssignedTo  uint
 }
 
 const (

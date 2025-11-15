@@ -22,7 +22,6 @@ type AuthClaims struct {
 
 // AuthMiddleware valida el JWT y (opcionalmente) exige uno de los roles dados.
 func (s *Server) AuthMiddleware(roles ...string) func(http.Handler) http.Handler {
-	// Preparamos un set de roles permitidos (si roles fue provisto)
 	roleRequired := map[string]struct{}{}
 	for _, r := range roles {
 		roleRequired[r] = struct{}{}
@@ -46,7 +45,7 @@ func (s *Server) AuthMiddleware(roles ...string) func(http.Handler) http.Handler
 				return
 			}
 
-			// Si se especificaron roles, revisamos que el del token esté permitido
+			// Si se especificaron roles, el del token esté permitido
 			if len(roleRequired) > 0 {
 				if _, ok := roleRequired[claims.Role]; !ok {
 					s.HandleError(w, http.StatusForbidden, r.URL.Path, errors.New("forbidden"))

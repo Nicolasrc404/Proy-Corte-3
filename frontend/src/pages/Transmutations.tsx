@@ -29,7 +29,12 @@ export default function Transmutations() {
   const loadTransmutations = async () => {
     if (!token) return;
     try {
-      const data = await apiFetch("/transmutations", "GET", undefined, token);
+      const data = await apiFetch<Transmutation[]>(
+        "/transmutations",
+        "GET",
+        undefined,
+        token
+      );
       setTransmutations(data ?? []);
     } catch (err) {
       console.error("Error cargando transmutaciones", err);
@@ -39,7 +44,12 @@ export default function Transmutations() {
   const loadMaterials = async () => {
     if (!token) return;
     try {
-      const data = await apiFetch("/materials", "GET", undefined, token);
+      const data = await apiFetch<Material[]>(
+        "/materials",
+        "GET",
+        undefined,
+        token
+      );
       setMaterials(data ?? []);
     } catch (err) {
       console.error("Error cargando materiales", err);
@@ -49,7 +59,6 @@ export default function Transmutations() {
   useEffect(() => {
     loadTransmutations();
     loadMaterials();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, user?.role]);
 
   useEffect(() => {
@@ -77,7 +86,6 @@ export default function Transmutations() {
     return () => {
       source.close();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {

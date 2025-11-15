@@ -1,22 +1,39 @@
 import { ReactNode } from "react";
 
-interface TableProps {
-  columns: string[];
-  data: any[];
-  onEdit?: (item: any) => void;
-  onDelete?: (id: number) => void;
-  formatters?: Record<string, (value: any, row: any) => ReactNode>;
-  renderActions?: (row: any) => ReactNode;
+type RowWithOptionalId = { id?: number };
+
+type ColumnKey<RowType extends RowWithOptionalId> = Extract<
+  keyof RowType,
+  string
+>;
+
+type RowId<RowType extends RowWithOptionalId> = RowType extends {
+  id?: infer Id;
+}
+  ? NonNullable<Id>
+  : never;
+
+type TableFormatters<RowType extends RowWithOptionalId> = Partial<{
+  [Key in ColumnKey<RowType>]: (value: RowType[Key], row: RowType) => ReactNode;
+}>;
+
+interface TableProps<RowType extends RowWithOptionalId> {
+  columns: ColumnKey<RowType>[];
+  data: RowType[];
+  onEdit?: (item: RowType) => void;
+  onDelete?: (id: RowId<RowType>) => void;
+  formatters?: TableFormatters<RowType>;
+  renderActions?: (row: RowType) => ReactNode;
 }
 
-export default function TableList({
+export default function TableList<RowType extends RowWithOptionalId>({
   columns,
   data,
   onEdit,
   onDelete,
   formatters,
   renderActions,
-}: TableProps) {
+}: TableProps<RowType>) {
   const showActions = Boolean(onEdit || onDelete || renderActions);
   return (
     <table className="w-full border mt-4 text-sm">
@@ -31,36 +48,52 @@ export default function TableList({
         </tr>
       </thead>
       <tbody>
-        {data.map((row) => (
-          <tr key={row.id} className="border-b hover:bg-gray-50">
-            {columns.map((col) => (
-              <td key={col} className="p-2 border">
-                {formatters?.[col] ? formatters[col](row[col], row) : row[col]}
-              </td>
-            ))}
-            {showActions && (
-              <td className="p-2 flex gap-2 items-center flex-wrap">
-                {renderActions && renderActions(row)}
-                {onEdit && (
-                  <button
-                    onClick={() => onEdit(row)}
-                    className="bg-yellow-400 px-2 rounded hover:bg-yellow-500"
-                  >
-                    Editar
-                  </button>
-                )}
-                {onDelete && (
-                  <button
-                    onClick={() => onDelete(row.id)}
-                    className="bg-red-500 text-white px-2 rounded hover:bg-red-600"
-                  >
-                    Eliminar
-                  </button>
-                )}
-              </td>
-            )}
-          </tr>
-        ))}
+        {data.map((row, index) => {
+          const rowKey = row.id ?? `row-${index}`;
+          const canDelete = Boolean(onDelete) && row.id !== undefined;
+          return (
+            <tr key={rowKey} className="border-b hover:bg-gray-50">
+              {columns.map((col) => {
+                const formatter = formatters?.[col];
+                const value = row[col];
+                return (
+                  <td key={col} className="p-2 border">
+                    {formatter ? formatter(value, row) : (value as ReactNode)}
+                  </td>
+                );
+              })}
+              {showActions && (
+                <td className="p-2 flex gap-2 items-center flex-wrap">
+                  {renderActions && renderActions(row)}
+                  {onEdit && (
+                    <button
+                      onClick={() => onEdit(row)}
+                      className="bg-yellow-400 px-2 rounded hover:bg-yellow-500"
+                    >
+                      Editar
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      onClick={() =>
+                        row.id !== undefined &&
+                        onDelete(row.id as RowId<RowType>)
+                      }
+                      disabled={!canDelete}
+                      className={`px-2 rounded text-white ${
+                        canDelete
+                          ? "bg-red-500 hover:bg-red-600"
+                          : "bg-gray-400 cursor-not-allowed"
+                      }`}
+                    >
+                      Eliminar
+                    </button>
+                  )}
+                </td>
+              )}
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );

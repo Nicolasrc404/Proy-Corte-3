@@ -50,9 +50,7 @@ func NewAuthHandler(jwtSecret string, ur repository.UserRepository,
 	}
 }
 
-//////////////////////////////////////////////////////
-// REGISTRO
-//////////////////////////////////////////////////////
+// * REGISTRO
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
@@ -143,9 +141,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	h.Logger(http.StatusCreated, r.URL.Path, start)
 }
 
-//////////////////////////////////////////////////////
-// LOGIN
-//////////////////////////////////////////////////////
+// * LOGIN
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()

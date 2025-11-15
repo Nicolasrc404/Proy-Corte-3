@@ -52,7 +52,7 @@ func (h *AuditHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{"data": resp})
+	json.NewEncoder(w).Encode(map[string]interface{}{"data": resp})
 	h.Log(http.StatusOK, r.URL.Path, start)
 }
 
@@ -85,7 +85,7 @@ func (h *AuditHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: a.CreatedAt.Format(time.RFC3339),
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{"data": resp})
+	json.NewEncoder(w).Encode(map[string]interface{}{"data": resp})
 	h.Log(http.StatusOK, r.URL.Path, start)
 }
 
@@ -122,7 +122,7 @@ func (h *AuditHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]any{"data": resp})
+	json.NewEncoder(w).Encode(map[string]interface{}{"data": resp})
 	if h.Broadcast != nil {
 		h.Broadcast("audit.created", resp)
 	}
@@ -187,7 +187,7 @@ func (h *AuditHandler) Edit(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	json.NewEncoder(w).Encode(map[string]any{"data": resp})
+	json.NewEncoder(w).Encode(map[string]interface{}{"data": resp})
 	if h.Broadcast != nil {
 		h.Broadcast("audit.updated", resp)
 	}
@@ -217,7 +217,7 @@ func (h *AuditHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.Broadcast != nil {
-		h.Broadcast("audit.deleted", map[string]any{"id": a.ID})
+		h.Broadcast("audit.deleted", map[string]interface{}{"id": a.ID})
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

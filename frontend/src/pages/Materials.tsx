@@ -19,13 +19,17 @@ export default function Materials() {
 
   const loadData = async () => {
     if (!token) return;
-    const res = await apiFetch("/materials", "GET", undefined, token);
+    const res = await apiFetch<Material[]>(
+      "/materials",
+      "GET",
+      undefined,
+      token
+    );
     setMaterials(res || []);
   };
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const resetForm = () => {

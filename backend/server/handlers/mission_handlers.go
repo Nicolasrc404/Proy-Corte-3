@@ -84,7 +84,7 @@ func (h *MissionHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{"data": resp})
+	json.NewEncoder(w).Encode(map[string]interface{}{"data": resp})
 	h.Log(http.StatusOK, r.URL.Path, start)
 }
 
@@ -116,7 +116,7 @@ func (h *MissionHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:   m.CreatedAt.Format(time.RFC3339),
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{"data": resp})
+	json.NewEncoder(w).Encode(map[string]interface{}{"data": resp})
 	h.Log(http.StatusOK, r.URL.Path, start)
 }
 
@@ -162,7 +162,7 @@ func (h *MissionHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]any{"data": resp})
+	json.NewEncoder(w).Encode(map[string]interface{}{"data": resp})
 	h.Log(http.StatusCreated, r.URL.Path, start)
 }
 
@@ -264,7 +264,7 @@ func (h *MissionHandler) Edit(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	json.NewEncoder(w).Encode(map[string]any{"data": resp})
+	json.NewEncoder(w).Encode(map[string]interface{}{"data": resp})
 	h.Log(http.StatusAccepted, r.URL.Path, start)
 }
 
@@ -309,7 +309,7 @@ func (h *MissionHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 			CreatedAt:   mission.CreatedAt.Format(time.RFC3339),
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{"data": resp})
+		json.NewEncoder(w).Encode(map[string]interface{}{"data": resp})
 		h.Log(http.StatusOK, r.URL.Path, start)
 		return
 	}
@@ -347,6 +347,6 @@ func (h *MissionHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	json.NewEncoder(w).Encode(map[string]any{"data": resp})
+	json.NewEncoder(w).Encode(map[string]interface{}{"data": resp})
 	h.Log(http.StatusAccepted, r.URL.Path, start)
 }
