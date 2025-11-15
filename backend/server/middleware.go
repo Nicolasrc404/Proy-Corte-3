@@ -1,6 +1,7 @@
 package server
 
 import (
+	"backend-avanzada/api"
 	"context"
 	"errors"
 	"net/http"
@@ -12,14 +13,15 @@ import (
 type userContextKey struct{}
 
 type AuthClaims struct {
+	ID    uint   `json:"id"`
 	Email string `json:"email"`
 	Role  string `json:"role"`
+	Name  string `json:"name"`
 	jwt.RegisteredClaims
 }
 
 // AuthMiddleware valida el JWT y (opcionalmente) exige uno de los roles dados.
 func (s *Server) AuthMiddleware(roles ...string) func(http.Handler) http.Handler {
-	// Preparamos un set de roles permitidos (si roles fue provisto)
 	roleRequired := map[string]struct{}{}
 	for _, r := range roles {
 		roleRequired[r] = struct{}{}
@@ -43,7 +45,7 @@ func (s *Server) AuthMiddleware(roles ...string) func(http.Handler) http.Handler
 				return
 			}
 
-			// Si se especificaron roles, revisamos que el del token esté permitido
+			// Si se especificaron roles, el del token esté permitido
 			if len(roleRequired) > 0 {
 				if _, ok := roleRequired[claims.Role]; !ok {
 					s.HandleError(w, http.StatusForbidden, r.URL.Path, errors.New("forbidden"))
@@ -62,6 +64,18 @@ func GetAuthClaims(r *http.Request) *AuthClaims {
 	if v := r.Context().Value(userContextKey{}); v != nil {
 		if c, ok := v.(*AuthClaims); ok {
 			return c
+		}
+	}
+	return nil
+}
+
+func currentUserExtractor(r *http.Request) *api.AuthenticatedUser {
+	if claims := GetAuthClaims(r); claims != nil {
+		return &api.AuthenticatedUser{
+			ID:    claims.ID,
+			Name:  claims.Name,
+			Email: claims.Email,
+			Role:  claims.Role,
 		}
 	}
 	return nil

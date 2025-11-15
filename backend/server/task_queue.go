@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"backend-avanzada/api"
 	"backend-avanzada/logger"
 	"backend-avanzada/models"
 	"backend-avanzada/repository"
@@ -42,9 +43,11 @@ type dailyVerificationPayload struct {
 	ExecutedAt time.Time `json:"executed_at"`
 }
 
-// TaskQueue orchestrates all background work for the application. It provides
-// helpers for HTTP handlers to enqueue jobs and executes them in a dedicated
-// worker that relies on Redis for coordination.
+type EventBroadcaster interface {
+	Broadcast(eventType string, payload interface{})
+}
+
+// TaskQueue coordina todo el trabajo en segundo plano de la aplicación.
 type TaskQueue struct {
 	redis              *RedisClient
 	logger             *logger.Logger
@@ -54,6 +57,7 @@ type TaskQueue struct {
 	auditRepo          *repository.AuditRepository
 	missionRepo        *repository.MissionRepository
 	materialRepo       *repository.MaterialRepository
+	broadcaster        EventBroadcaster
 	verificationTicker *time.Ticker
 	verificationEvery  time.Duration
 	pendingThreshold   time.Duration
@@ -87,6 +91,10 @@ func (q *TaskQueue) WithRepositories(
 	q.materialRepo = materialRepo
 }
 
+func (q *TaskQueue) WithBroadcaster(b EventBroadcaster) {
+	q.broadcaster = b
+}
+
 func (q *TaskQueue) ConfigureThresholds(verificationEvery, pendingThreshold time.Duration, lowStockThreshold float64) {
 	if verificationEvery > 0 {
 		q.verificationEvery = verificationEvery
@@ -99,7 +107,13 @@ func (q *TaskQueue) ConfigureThresholds(verificationEvery, pendingThreshold time
 	}
 }
 
-// Start spins up the worker that consumes jobs from Redis.
+func (q *TaskQueue) broadcast(eventType string, payload interface{}) {
+	if q.broadcaster != nil {
+		q.broadcaster.Broadcast(eventType, payload)
+	}
+}
+
+// Start arranca el worker que consume trabajos desde Redis.
 func (q *TaskQueue) Start() error {
 	if q.started {
 		return nil
@@ -112,7 +126,7 @@ func (q *TaskQueue) Start() error {
 	return nil
 }
 
-// Stop gracefully cancels the worker and ticker.
+// Stop detiene de forma ordenada el worker y el ticker.
 func (q *TaskQueue) Stop() {
 	q.cancel()
 	if q.verificationTicker != nil {
@@ -120,7 +134,7 @@ func (q *TaskQueue) Stop() {
 	}
 }
 
-// ScheduleDailyVerification enqueues verification jobs at the configured interval.
+// ScheduleDailyVerification programa trabajos de verificación en el intervalo configurado.
 func (q *TaskQueue) ScheduleDailyVerification() {
 	if !q.started {
 		return
@@ -145,15 +159,21 @@ func (q *TaskQueue) ScheduleDailyVerification() {
 	}()
 }
 
-// EnqueueTransmutationProcessing schedules the heavy processing of a transmutation.
+// EnqueueTransmutationProcessing programa el procesamiento pesado de una transmutación.
 func (q *TaskQueue) EnqueueTransmutationProcessing(transmutationID uint, requestedBy string) error {
 	payload := processTransmutationPayload{TransmutationID: transmutationID, RequestedBy: requestedBy}
 	return q.enqueue(taskTypeProcessTransmutation, payload)
 }
 
-// EnqueueAudit registers an audit asynchronously so handlers do not block on DB writes.
+// EnqueueAudit registra una auditoría de forma asíncrona para que los handlers no se bloqueen en escrituras a la base de datos.
 func (q *TaskQueue) EnqueueAudit(action, entity string, entityID uint, userEmail, details string) error {
-	payload := registerAuditPayload{Action: action, Entity: entity, EntityID: entityID, UserEmail: userEmail, Details: details}
+	payload := registerAuditPayload{
+		Action:    action,
+		Entity:    entity,
+		EntityID:  entityID,
+		UserEmail: userEmail,
+		Details:   details,
+	}
 	return q.enqueue(taskTypeRegisterAudit, payload)
 }
 
@@ -201,6 +221,7 @@ func (q *TaskQueue) worker() {
 		}
 		if err := q.dispatch(task); err != nil {
 			q.logger.Printf("[async] error ejecutando tarea %s: %v", task.Type, err)
+			q.recordWorkerError(task.Type, err)
 		}
 	}
 }
@@ -237,27 +258,46 @@ func (q *TaskQueue) handleTransmutation(payload processTransmutationPayload) err
 	if transmutation == nil {
 		return fmt.Errorf("transmutación %d no encontrada", payload.TransmutationID)
 	}
-	if strings.EqualFold(transmutation.Status, "completada") {
+	if strings.EqualFold(transmutation.Status, models.TransmutationStatusCompleted) {
 		return nil
 	}
 
-	// Simula un trabajo costoso.
-	time.Sleep(3 * time.Second)
-	transmutation.Status = "completada"
-	transmutation.Result = fmt.Sprintf("Transmutación %d procesada exitosamente", transmutation.ID)
+	startedAt := time.Now().UTC()
+	transmutation.Status = models.TransmutationStatusProcessing
+	transmutation.Result = fmt.Sprintf("Processing started at %s", startedAt.Format(time.RFC3339))
 	if _, err := q.transRepo.Save(transmutation); err != nil {
 		return err
 	}
+	q.broadcast("transmutation.updated", transmutationToResponse(transmutation))
+
+	// Simula un trabajo costoso.
+	time.Sleep(3 * time.Second)
+
+	transmutation.Status = models.TransmutationStatusCompleted
+	transmutation.Result = fmt.Sprintf("Completed at %s", time.Now().UTC().Format(time.RFC3339))
+	if _, err := q.transRepo.Save(transmutation); err != nil {
+		transmutation.Status = models.TransmutationStatusFailed
+		transmutation.Result = fmt.Sprintf("Failed to persist completion: %v", err)
+		if _, saveErr := q.transRepo.Save(transmutation); saveErr != nil {
+			q.logger.Printf("[async] error marcando transmutación %d como fallida: %v", transmutation.ID, saveErr)
+		}
+		q.broadcast("transmutation.updated", transmutationToResponse(transmutation))
+		return err
+	}
+
+	q.broadcast("transmutation.updated", transmutationToResponse(transmutation))
 
 	if q.auditRepo != nil {
 		audit := registerAuditPayload{
-			Action:    "process_transmutation",
+			Action:    "transmutation_processed",
 			Entity:    "transmutation",
 			EntityID:  transmutation.ID,
 			UserEmail: payload.RequestedBy,
 			Details:   transmutation.Result,
 		}
-		return q.handleAudit(audit)
+		if err := q.handleAudit(audit); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -273,8 +313,12 @@ func (q *TaskQueue) handleAudit(payload registerAuditPayload) error {
 		UserEmail: payload.UserEmail,
 		Details:   payload.Details,
 	}
-	_, err := q.auditRepo.Save(audit)
-	return err
+	saved, err := q.auditRepo.Save(audit)
+	if err != nil {
+		return err
+	}
+	q.broadcast("audit.created", auditToResponse(saved))
+	return nil
 }
 
 func (q *TaskQueue) handleDailyVerification() error {
@@ -325,24 +369,75 @@ func (q *TaskQueue) handleDailyVerification() error {
 		Details:   strings.Join(details, "; "),
 		UserEmail: "system",
 	}
-	_, err := q.auditRepo.Save(audit)
-	return err
+	saved, err := q.auditRepo.Save(audit)
+	if err != nil {
+		return err
+	}
+	q.broadcast("audit.created", auditToResponse(saved))
+	return nil
 }
 
-// asyncErrorReporter creates a helper that handlers can use to report async issues.
+func transmutationToResponse(t *models.Transmutation) *api.TransmutationResponseDto {
+	if t == nil {
+		return nil
+	}
+	return &api.TransmutationResponseDto{
+		ID:         int(t.ID),
+		UserID:     t.UserID,
+		MaterialID: t.MaterialID,
+		Formula:    t.Formula,
+		Quantity:   t.Quantity,
+		Status:     t.Status,
+		Result:     t.Result,
+		CreatedAt:  t.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:  t.UpdatedAt.Format(time.RFC3339),
+	}
+}
+
+func auditToResponse(a *models.Audit) *api.AuditResponseDto {
+	if a == nil {
+		return nil
+	}
+	return &api.AuditResponseDto{
+		ID:        int(a.ID),
+		Action:    a.Action,
+		Entity:    a.Entity,
+		EntityID:  a.EntityID,
+		UserEmail: a.UserEmail,
+		Details:   a.Details,
+		CreatedAt: a.CreatedAt.Format(time.RFC3339),
+	}
+}
+
+func (q *TaskQueue) recordWorkerError(taskType string, cause error) {
+	if cause == nil || q.auditRepo == nil {
+		return
+	}
+	audit := &models.Audit{
+		Action:    "worker_error",
+		Entity:    taskType,
+		Details:   cause.Error(),
+		UserEmail: "system",
+	}
+	saved, err := q.auditRepo.Save(audit)
+	if err != nil {
+		q.logger.Printf("[async] no se pudo registrar auditoría de error: %v", err)
+		return
+	}
+	q.broadcast("audit.created", auditToResponse(saved))
+}
+
+// asyncErrorReporter crea un ayudante que los controladores pueden utilizar para informar de problemas asíncronos.
 func (s *Server) asyncErrorReporter() func(path string, err error) {
 	return func(path string, err error) {
 		if err == nil {
 			return
 		}
 		s.logger.Error(http.StatusInternalServerError, fmt.Sprintf("%s [async]", path), err)
+		if s.taskQueue != nil {
+			if enqueueErr := s.taskQueue.EnqueueAudit("async_error", "system", 0, "system", fmt.Sprintf("%s: %v", path, err)); enqueueErr != nil {
+				s.logger.Error(http.StatusInternalServerError, fmt.Sprintf("%s [async-audit]", path), enqueueErr)
+			}
+		}
 	}
-}
-
-// currentUserExtractor returns the email stored in the JWT claims.
-func currentUserExtractor(r *http.Request) string {
-	if claims := GetAuthClaims(r); claims != nil {
-		return claims.Email
-	}
-	return ""
 }

@@ -1,0 +1,71 @@
+
+
+services:
+  # FRONTEND: React + Vite + Nginx
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: amestris-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # BACKEND: Go API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: amestris-backend
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: backend-avanzada-1
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      JWT_SECRET: "supersecreto123"
+      INIT_SQL_PATH: /seed/init.sql
+    volumes:
+      - ./init.sql:/seed/init.sql:r
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  # POSTGRES
+  postgres:
+    image: postgres:15
+    container_name: amestris-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: backend-avanzada-1
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # REDIS (cola de mensajes)
+  redis:
+    image: redis:7-alpine
+    container_name: amestris-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+# VOLUMENES
+volumes:
+  postgres_data:

@@ -16,7 +16,7 @@ import (
 type AlchemistHandler struct {
 	Repo             *repository.AlchemistRepository
 	Dispatcher       AsyncDispatcher
-	CurrentUser      func(*http.Request) string
+	CurrentUser      func(*http.Request) *api.AuthenticatedUser
 	ReportAsyncError func(string, error)
 	Log              func(status int, path string, start time.Time)
 	HandleErr        func(w http.ResponseWriter, statusCode int, path string, cause error)
@@ -25,7 +25,7 @@ type AlchemistHandler struct {
 func NewAlchemistHandler(
 	repo *repository.AlchemistRepository,
 	dispatcher AsyncDispatcher,
-	currentUser func(*http.Request) string,
+	currentUser func(*http.Request) *api.AuthenticatedUser,
 	reportAsyncError func(string, error),
 	handleErr func(http.ResponseWriter, int, string, error),
 	log func(int, string, time.Time),
@@ -42,7 +42,9 @@ func NewAlchemistHandler(
 
 func (h *AlchemistHandler) userEmail(r *http.Request) string {
 	if h.CurrentUser != nil {
-		return h.CurrentUser(r)
+		if user := h.CurrentUser(r); user != nil {
+			return user.Email
+		}
 	}
 	return ""
 }

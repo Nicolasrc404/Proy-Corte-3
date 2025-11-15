@@ -24,3 +24,7 @@ type MissionEditRequestDto struct {
 	Status      *string `json:"status,omitempty"`
 	AssignedTo  *uint   `json:"assigned_to,omitempty"`
 }
+
+type MissionStatusUpdateRequest struct {
+	Status string `json:"status"`
+}

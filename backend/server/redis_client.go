@@ -13,12 +13,9 @@ import (
 	"time"
 )
 
-// redisQueueKey defines the default list used to enqueue tasks.
+// redisQueueKey define la lista predeterminada utilizada para poner en cola las tareas.
 const redisQueueKey = "alchemy:tasks"
 
-// RedisClient is a minimal RESP client tailored for pushing and popping
-// messages from Redis without relying on external dependencies. It only
-// implements the handful of commands that the async pipeline requires.
 type RedisClient struct {
 	addr        string
 	dialTimeout time.Duration
@@ -58,7 +55,7 @@ func (c *RedisClient) Ping(ctx context.Context) error {
 	return fmt.Errorf("unexpected PING response: %v", resp)
 }
 
-// LPUSH prepends a value to the configured list.
+// LPUSH antepone un valor a la lista configurada.
 func (c *RedisClient) LPUSH(ctx context.Context, key string, value []byte) error {
 	conn, reader, err := c.dial()
 	if err != nil {
@@ -73,8 +70,7 @@ func (c *RedisClient) LPUSH(ctx context.Context, key string, value []byte) error
 	return err
 }
 
-// BRPOP blocks until a value is available for the given key. It honours the
-// provided context for cancellation.
+// BRPOP bloquea hasta que hay un valor disponible para la clave dada
 func (c *RedisClient) BRPOP(ctx context.Context, key string) ([]byte, error) {
 	conn, reader, err := c.dial()
 	if err != nil {

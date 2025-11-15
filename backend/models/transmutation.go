@@ -4,9 +4,17 @@ import "gorm.io/gorm"
 
 type Transmutation struct {
 	gorm.Model
-	AlchemistID uint
-	MaterialID  uint
-	Formula     string
-	Status      string `gorm:"default:en_proceso"`
-	Result      string
+	UserID     uint
+	MaterialID uint
+	Formula    string
+	Quantity   float64
+	Status     string `gorm:"size:32;default:PENDING"`
+	Result     string
 }
+
+const (
+	TransmutationStatusPending    = "PENDING"
+	TransmutationStatusProcessing = "PROCESSING"
+	TransmutationStatusCompleted  = "COMPLETED"
+	TransmutationStatusFailed     = "FAILED"
+)

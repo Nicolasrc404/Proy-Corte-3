@@ -19,7 +19,12 @@ export default function Alchemists() {
 
   // Cargar lista inicial
   const loadData = async () => {
-    const res = await apiFetch("/alchemists", "GET", undefined, token!);
+    const res = await apiFetch<Alchemist[]>(
+      "/alchemists",
+      "GET",
+      undefined,
+      token!
+    );
     setAlchemists(res || []);
   };
 
@@ -69,7 +74,6 @@ export default function Alchemists() {
           Gestión de Alquimistas
         </h1>
 
-        {/* Formulario */}
         <form
           onSubmit={handleSubmit}
           className="bg-white p-4 rounded shadow mb-6 flex flex-col gap-3"
@@ -117,7 +121,6 @@ export default function Alchemists() {
           </button>
         </form>
 
-        {/* Tabla */}
         <TableList
           columns={["id", "name", "age", "specialty", "rank"]}
           data={alchemists}
@@ -125,7 +128,7 @@ export default function Alchemists() {
           onDelete={handleDelete}
         />
       </div>
-      <Footer /> {/* ✅ agregado */}
+      <Footer />
     </div>
   );
 }

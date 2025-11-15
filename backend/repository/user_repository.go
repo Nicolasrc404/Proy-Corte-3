@@ -32,7 +32,8 @@ func (r *GormUserRepository) FindByEmail(email string) (*models.User, error) {
 }
 
 func (r *GormUserRepository) Save(u *models.User) (*models.User, error) {
-	if err := r.db.Save(u).Error; err != nil {
+	err := r.db.Create(u).Error
+	if err != nil {
 		return nil, err
 	}
 	return u, nil

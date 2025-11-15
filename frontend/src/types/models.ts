@@ -1,15 +1,14 @@
-// ===============================
-// 🔐 Autenticación
-// ===============================
+// * Authentication
 
 export interface User {
+  id: number;
+  name: string;
   email: string;
+  specialty?: string;
   role: "alchemist" | "supervisor";
 }
 
-// ===============================
-// ⚗️ Alchemist
-// ===============================
+// * Alchemist
 
 export interface Alchemist {
   id?: number;
@@ -20,23 +19,19 @@ export interface Alchemist {
   created_at?: string;
 }
 
-// ===============================
-// 🎯 Mission
-// ===============================
+// * Mission
 
 export interface Mission {
   id?: number;
   title: string;
   description: string;
   difficulty: "baja" | "media" | "alta" | string;
-  status?: "pendiente" | "en_progreso" | "completada" | string;
-  assigned_to: number; // id del alquimista
+  status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "ARCHIVED" | string;
+  assigned_to: number;
   created_at?: string;
 }
 
-// ===============================
-// ⚙️ Material
-// ===============================
+// * Material
 
 export interface Material {
   id?: number;
@@ -46,29 +41,27 @@ export interface Material {
   created_at?: string;
 }
 
-// ===============================
-// 🔮 Transmutation
-// ===============================
+// *Transmutation
 
 export interface Transmutation {
   id?: number;
-  alchemist_id: number;
+  user_id: number;
   material_id: number;
+  quantity: number;
   formula?: string;
-  status?: "en_proceso" | "completada" | "fallida" | string;
+  status?: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED" | string;
   result?: string;
   created_at?: string;
+  updated_at?: string;
 }
 
-// ===============================
-// 🕵️ Audit
-// ===============================
-
+// * Audit
 export interface Audit {
   id?: number;
-  action: "CREATE" | "UPDATE" | "DELETE" | string;
-  entity: string; // nombre de la entidad afectada
+  action: string;
+  entity: string;
   entity_id: number;
   user_email: string;
+  details?: string;
   created_at?: string;
 }

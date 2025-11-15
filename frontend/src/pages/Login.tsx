@@ -1,23 +1,52 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom"; // ✅ import Link
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { apiFetch } from "../services/api";
+import type { User } from "../types/models";
+
+interface LoginResponse {
+  token: string;
+  id: number;
+  name: string;
+  email: string;
+  specialty?: string;
+  role: User["role"];
+}
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await apiFetch("/auth/login", "POST", { email, password });
-    if (res?.token) {
-      const payload = JSON.parse(atob(res.token.split(".")[1]));
-      login(res.token, { email: payload.email, role: payload.role });
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiFetch<LoginResponse>("/auth/login", "POST", {
+        email,
+        password,
+      });
+      if (!res?.token) {
+        throw new Error("Respuesta inválida del servidor");
+      }
+      login(res.token, {
+        id: res.id,
+        name: res.name,
+        email: res.email,
+        specialty: res.specialty,
+        role: res.role,
+      });
       navigate("/dashboard");
-    } else {
-      alert("Credenciales incorrectas");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Credenciales incorrectas";
+      setError(message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -44,11 +73,15 @@ export default function Login() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
         <button
-          className="bg-blue-600 text-white rounded p-2 hover:bg-blue-700"
+          className="bg-blue-600 text-white rounded p-2 hover:bg-blue-700 disabled:opacity-60"
           type="submit"
+          disabled={loading}
         >
-          Entrar
+          {loading ? "Ingresando..." : "Entrar"}
         </button>
 
         {/* 🔽 Enlace al registro */}

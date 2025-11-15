@@ -16,7 +16,7 @@ import (
 type MaterialHandler struct {
 	Repo             *repository.MaterialRepository
 	Dispatcher       AsyncDispatcher
-	CurrentUser      func(*http.Request) string
+	CurrentUser      func(*http.Request) *api.AuthenticatedUser
 	ReportAsyncError func(string, error)
 	HandleErr        func(http.ResponseWriter, int, string, error)
 	Log              func(int, string, time.Time)
@@ -25,7 +25,7 @@ type MaterialHandler struct {
 func NewMaterialHandler(
 	repo *repository.MaterialRepository,
 	dispatcher AsyncDispatcher,
-	currentUser func(*http.Request) string,
+	currentUser func(*http.Request) *api.AuthenticatedUser,
 	reportAsyncError func(string, error),
 	handleErr func(http.ResponseWriter, int, string, error),
 	log func(int, string, time.Time),
@@ -42,7 +42,9 @@ func NewMaterialHandler(
 
 func (h *MaterialHandler) userEmail(r *http.Request) string {
 	if h.CurrentUser != nil {
-		return h.CurrentUser(r)
+		if user := h.CurrentUser(r); user != nil {
+			return user.Email
+		}
 	}
 	return ""
 }
@@ -108,6 +110,10 @@ func (h *MaterialHandler) Create(w http.ResponseWriter, r *http.Request) {
 		h.HandleErr(w, http.StatusBadRequest, r.URL.Path, errors.New("name required"))
 		return
 	}
+	if req.Quantity < 0 {
+		h.HandleErr(w, http.StatusBadRequest, r.URL.Path, errors.New("quantity must be positive"))
+		return
+	}
 	m := &models.Material{
 		Name:     req.Name,
 		Category: req.Category,
@@ -119,7 +125,7 @@ func (h *MaterialHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.Dispatcher != nil {
-		if err := h.Dispatcher.EnqueueAudit("create", "material", m.ID, h.userEmail(r), "Registro de material"); err != nil {
+		if err := h.Dispatcher.EnqueueAudit("material_created", "material", m.ID, h.userEmail(r), "Material created"); err != nil {
 			h.ReportAsyncError(r.URL.Path, err)
 		}
 	}
@@ -158,7 +164,7 @@ func (h *MaterialHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.Dispatcher != nil {
-		if err := h.Dispatcher.EnqueueAudit("delete", "material", m.ID, h.userEmail(r), "Eliminación de material"); err != nil {
+		if err := h.Dispatcher.EnqueueAudit("material_deleted", "material", m.ID, h.userEmail(r), "Material deleted"); err != nil {
 			h.ReportAsyncError(r.URL.Path, err)
 		}
 	}
@@ -196,6 +202,10 @@ func (h *MaterialHandler) Edit(w http.ResponseWriter, r *http.Request) {
 		m.Category = *req.Category
 	}
 	if req.Quantity != nil {
+		if *req.Quantity < 0 {
+			h.HandleErr(w, http.StatusBadRequest, r.URL.Path, errors.New("quantity must be positive"))
+			return
+		}
 		m.Quantity = *req.Quantity
 	}
 
@@ -205,7 +215,7 @@ func (h *MaterialHandler) Edit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.Dispatcher != nil {
-		if err := h.Dispatcher.EnqueueAudit("update", "material", m.ID, h.userEmail(r), "Actualización de material"); err != nil {
+		if err := h.Dispatcher.EnqueueAudit("material_updated", "material", m.ID, h.userEmail(r), "Material updated"); err != nil {
 			h.ReportAsyncError(r.URL.Path, err)
 		}
 	}
