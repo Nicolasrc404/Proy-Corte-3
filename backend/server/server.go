@@ -6,11 +6,13 @@ import (
 	"backend-avanzada/models"
 	"backend-avanzada/repository"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/handlers"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
@@ -31,12 +33,14 @@ type Server struct {
 	jwtSecret               string
 	logger                  *logger.Logger
 	taskQueue               *TaskQueue
+	eventHub                *EventHub
 }
 
 // NewServer inicializa la instancia del servidor.
 func NewServer() *Server {
 	s := &Server{
-		logger: logger.NewLogger(),
+		logger:   logger.NewLogger(),
+		eventHub: NewEventHub(),
 	}
 	var cfg config.Config
 	configFile, err := os.ReadFile("config/config.json")
@@ -144,6 +148,7 @@ func (s *Server) initAsyncInfrastructure() error {
 		s.MissionRepository,
 		s.MaterialRepository,
 	)
+	s.taskQueue.WithBroadcaster(s.eventHub)
 
 	verificationInterval := time.Duration(s.Config.VerificationIntervalMinutes) * time.Minute
 	pendingHours := time.Duration(s.Config.PendingTransmutationHours) * time.Hour
@@ -160,4 +165,67 @@ func (s *Server) initAsyncInfrastructure() error {
 // GetJWTSecret devuelve la clave secreta usada para firmar los tokens JWT.
 func (s *Server) GetJWTSecret() string {
 	return s.jwtSecret
+}
+
+func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
+	tokenString := r.URL.Query().Get("token")
+	if tokenString == "" {
+		s.HandleError(w, http.StatusUnauthorized, r.URL.Path, errors.New("missing token"))
+		return
+	}
+
+	claims := &AuthClaims{}
+	_, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
+		return []byte(s.jwtSecret), nil
+	})
+	if err != nil {
+		s.HandleError(w, http.StatusUnauthorized, r.URL.Path, fmt.Errorf("invalid token: %w", err))
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		s.HandleError(w, http.StatusInternalServerError, r.URL.Path, errors.New("streaming unsupported"))
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	client := s.eventHub.Subscribe()
+	defer s.eventHub.Unsubscribe(client)
+
+	welcome := map[string]any{
+		"type": "connection",
+		"payload": map[string]any{
+			"role":  claims.Role,
+			"email": claims.Email,
+			"name":  claims.Name,
+		},
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+	}
+	if data, err := json.Marshal(welcome); err == nil {
+		fmt.Fprintf(w, "data: %s\n\n", data)
+		flusher.Flush()
+	}
+
+	keepAlive := time.NewTicker(30 * time.Second)
+	defer keepAlive.Stop()
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case msg, ok := <-client:
+			if !ok {
+				return
+			}
+			fmt.Fprintf(w, "data: %s\n\n", msg)
+			flusher.Flush()
+		case <-keepAlive.C:
+			fmt.Fprintf(w, ": ping\n\n")
+			flusher.Flush()
+		}
+	}
 }

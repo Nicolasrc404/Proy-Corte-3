@@ -15,16 +15,18 @@ import (
 
 type AuditHandler struct {
 	Repo      *repository.AuditRepository
+	Broadcast func(string, interface{})
 	HandleErr func(http.ResponseWriter, int, string, error)
 	Log       func(int, string, time.Time)
 }
 
 func NewAuditHandler(
 	repo *repository.AuditRepository,
+	broadcast func(string, interface{}),
 	handleErr func(http.ResponseWriter, int, string, error),
 	log func(int, string, time.Time),
 ) *AuditHandler {
-	return &AuditHandler{Repo: repo, HandleErr: handleErr, Log: log}
+	return &AuditHandler{Repo: repo, Broadcast: broadcast, HandleErr: handleErr, Log: log}
 }
 
 // GET /audits
@@ -121,6 +123,9 @@ func (h *AuditHandler) Create(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]any{"data": resp})
+	if h.Broadcast != nil {
+		h.Broadcast("audit.created", resp)
+	}
 	h.Log(http.StatusCreated, r.URL.Path, start)
 }
 
@@ -183,6 +188,9 @@ func (h *AuditHandler) Edit(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(w).Encode(map[string]any{"data": resp})
+	if h.Broadcast != nil {
+		h.Broadcast("audit.updated", resp)
+	}
 	h.Log(http.StatusAccepted, r.URL.Path, start)
 }
 
@@ -207,6 +215,9 @@ func (h *AuditHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	if err := h.Repo.Delete(a); err != nil {
 		h.HandleErr(w, http.StatusInternalServerError, r.URL.Path, err)
 		return
+	}
+	if h.Broadcast != nil {
+		h.Broadcast("audit.deleted", map[string]any{"id": a.ID})
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

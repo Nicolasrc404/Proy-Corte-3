@@ -13,6 +13,14 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
+type AuthenticatedUser struct {
+	ID        uint   `json:"id"`
+	Name      string `json:"name"`
+	Specialty string `json:"specialty"`
+	Email     string `json:"email"`
+	Role      string `json:"role"`
+}
+
 type AuthResponse struct {
 	Token     string `json:"token,omitempty"`
 	ID        uint   `json:"id,omitempty"`

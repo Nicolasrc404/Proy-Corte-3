@@ -1,6 +1,7 @@
 package server
 
 import (
+	"backend-avanzada/api"
 	"context"
 	"errors"
 	"net/http"
@@ -12,8 +13,10 @@ import (
 type userContextKey struct{}
 
 type AuthClaims struct {
+	ID    uint   `json:"id"`
 	Email string `json:"email"`
 	Role  string `json:"role"`
+	Name  string `json:"name"`
 	jwt.RegisteredClaims
 }
 
@@ -62,6 +65,18 @@ func GetAuthClaims(r *http.Request) *AuthClaims {
 	if v := r.Context().Value(userContextKey{}); v != nil {
 		if c, ok := v.(*AuthClaims); ok {
 			return c
+		}
+	}
+	return nil
+}
+
+func currentUserExtractor(r *http.Request) *api.AuthenticatedUser {
+	if claims := GetAuthClaims(r); claims != nil {
+		return &api.AuthenticatedUser{
+			ID:    claims.ID,
+			Name:  claims.Name,
+			Email: claims.Email,
+			Role:  claims.Role,
 		}
 	}
 	return nil

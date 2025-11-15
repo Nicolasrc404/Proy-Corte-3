@@ -7,6 +7,13 @@ type Mission struct {
 	Title       string
 	Description string
 	Difficulty  string
-	Status      string `gorm:"default:pendiente"`
+	Status      string `gorm:"size:32;default:PENDING"`
 	AssignedTo  uint   // Alchemist ID
 }
+
+const (
+	MissionStatusPending    = "PENDING"
+	MissionStatusInProgress = "IN_PROGRESS"
+	MissionStatusCompleted  = "COMPLETED"
+	MissionStatusArchived   = "ARCHIVED"
+)

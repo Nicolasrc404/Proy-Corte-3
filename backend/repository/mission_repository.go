@@ -37,6 +37,6 @@ func (r *MissionRepository) Delete(m *models.Mission) error {
 
 func (r *MissionRepository) FindOpenBefore(threshold time.Time) ([]*models.Mission, error) {
 	var ms []*models.Mission
-	err := r.db.Where("status <> ? AND updated_at < ?", "completada", threshold).Find(&ms).Error
+	err := r.db.Where("status <> ? AND updated_at < ?", models.MissionStatusCompleted, threshold).Find(&ms).Error
 	return ms, err
 }

@@ -1,8 +1,8 @@
 interface TableProps {
   columns: string[];
   data: any[];
-  onEdit: (item: any) => void;
-  onDelete: (id: number) => void;
+  onEdit?: (item: any) => void;
+  onDelete?: (id: number) => void;
 }
 
 export default function TableList({
@@ -11,6 +11,7 @@ export default function TableList({
   onEdit,
   onDelete,
 }: TableProps) {
+  const showActions = Boolean(onEdit || onDelete);
   return (
     <table className="w-full border mt-4 text-sm">
       <thead className="bg-gray-200">
@@ -20,7 +21,7 @@ export default function TableList({
               {c}
             </th>
           ))}
-          <th className="border p-2">Acciones</th>
+          {showActions && <th className="border p-2">Acciones</th>}
         </tr>
       </thead>
       <tbody>
@@ -31,20 +32,26 @@ export default function TableList({
                 {row[col]}
               </td>
             ))}
-            <td className="p-2 flex gap-2">
-              <button
-                onClick={() => onEdit(row)}
-                className="bg-yellow-400 px-2 rounded hover:bg-yellow-500"
-              >
-                Editar
-              </button>
-              <button
-                onClick={() => onDelete(row.id)}
-                className="bg-red-500 text-white px-2 rounded hover:bg-red-600"
-              >
-                Eliminar
-              </button>
-            </td>
+            {showActions && (
+              <td className="p-2 flex gap-2">
+                {onEdit && (
+                  <button
+                    onClick={() => onEdit(row)}
+                    className="bg-yellow-400 px-2 rounded hover:bg-yellow-500"
+                  >
+                    Editar
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    onClick={() => onDelete(row.id)}
+                    className="bg-red-500 text-white px-2 rounded hover:bg-red-600"
+                  >
+                    Eliminar
+                  </button>
+                )}
+              </td>
+            )}
           </tr>
         ))}
       </tbody>

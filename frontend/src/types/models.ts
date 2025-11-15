@@ -3,7 +3,10 @@
 // ===============================
 
 export interface User {
+  id: number;
+  name: string;
   email: string;
+  specialty?: string;
   role: "alchemist" | "supervisor";
 }
 
@@ -29,7 +32,7 @@ export interface Mission {
   title: string;
   description: string;
   difficulty: "baja" | "media" | "alta" | string;
-  status?: "pendiente" | "en_progreso" | "completada" | string;
+  status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "ARCHIVED" | string;
   assigned_to: number; // id del alquimista
   created_at?: string;
 }
@@ -56,9 +59,10 @@ export interface Transmutation {
   material_id: number;
   quantity: number;
   formula?: string;
-  status?: "en_proceso" | "completada" | "fallida" | string;
+  status?: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED" | string;
   result?: string;
   created_at?: string;
+  updated_at?: string;
 }
 
 // ===============================
@@ -67,9 +71,10 @@ export interface Transmutation {
 
 export interface Audit {
   id?: number;
-  action: "CREATE" | "UPDATE" | "DELETE" | string;
+  action: string;
   entity: string; // nombre de la entidad afectada
   entity_id: number;
   user_email: string;
+  details?: string;
   created_at?: string;
 }

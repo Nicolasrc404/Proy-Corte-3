@@ -11,6 +11,8 @@ func (s *Server) router() http.Handler {
 	router := mux.NewRouter()
 	router.Use(s.logger.RequestLogger)
 
+	router.HandleFunc("/events", s.handleEvents).Methods(http.MethodGet)
+
 	dispatcher := s.taskQueue
 	asyncReporter := s.asyncErrorReporter()
 	currentUser := currentUserExtractor
@@ -19,6 +21,7 @@ func (s *Server) router() http.Handler {
 	authHandler := handlers.NewAuthHandler(
 		s.GetJWTSecret(),
 		s.UserRepository,
+		dispatcher,
 		s.HandleError,
 		s.logger.Info,
 	)
@@ -37,8 +40,14 @@ func (s *Server) router() http.Handler {
 			s.logger.Info,
 		)
 		// Lectura pública
-		router.HandleFunc("/alchemists", alchHandler.GetAll).Methods(http.MethodGet)
-		router.HandleFunc("/alchemists/{id}", alchHandler.GetByID).Methods(http.MethodGet)
+		router.Handle(
+			"/alchemists",
+			s.AuthMiddleware("supervisor")(http.HandlerFunc(alchHandler.GetAll)),
+		).Methods(http.MethodGet)
+		router.Handle(
+			"/alchemists/{id}",
+			s.AuthMiddleware("supervisor")(http.HandlerFunc(alchHandler.GetByID)),
+		).Methods(http.MethodGet)
 
 		// Mutaciones protegidas
 		router.Handle(
@@ -64,8 +73,14 @@ func (s *Server) router() http.Handler {
 				s.HandleError,
 				s.logger.Info,
 			)
-			router.HandleFunc("/missions", mh.GetAll).Methods(http.MethodGet)
-			router.HandleFunc("/missions/{id}", mh.GetByID).Methods(http.MethodGet)
+			router.Handle(
+				"/missions",
+				s.AuthMiddleware("alchemist", "supervisor")(http.HandlerFunc(mh.GetAll)),
+			).Methods(http.MethodGet)
+			router.Handle(
+				"/missions/{id}",
+				s.AuthMiddleware("alchemist", "supervisor")(http.HandlerFunc(mh.GetByID)),
+			).Methods(http.MethodGet)
 			router.Handle("/missions",
 				s.AuthMiddleware("supervisor")(http.HandlerFunc(mh.Create)),
 			).Methods(http.MethodPost)
@@ -84,17 +99,24 @@ func (s *Server) router() http.Handler {
 				dispatcher,
 				currentUser,
 				asyncReporter,
+				s.eventHub.Broadcast,
 				s.HandleError,
 				s.logger.Info,
 			)
 
 			router.Handle(
 				"/transmutations",
+				s.AuthMiddleware("alchemist", "supervisor")(http.HandlerFunc(transHandler.GetAll)),
+			).Methods(http.MethodGet)
+			router.Handle(
+				"/transmutations/{id}",
+				s.AuthMiddleware("alchemist", "supervisor")(http.HandlerFunc(transHandler.GetByID)),
+			).Methods(http.MethodGet)
+
+			router.Handle(
+				"/transmutations",
 				s.AuthMiddleware("alchemist", "supervisor")(http.HandlerFunc(transHandler.Create)),
 			).Methods(http.MethodPost)
-
-			router.HandleFunc("/transmutations", transHandler.GetAll).Methods(http.MethodGet)
-			router.HandleFunc("/transmutations/{id}", transHandler.GetByID).Methods(http.MethodGet)
 
 			router.Handle(
 				"/transmutations/{id}",
@@ -117,8 +139,14 @@ func (s *Server) router() http.Handler {
 				s.HandleError,
 				s.logger.Info,
 			)
-			router.HandleFunc("/materials", matHandler.GetAll).Methods(http.MethodGet)
-			router.HandleFunc("/materials/{id}", matHandler.GetByID).Methods(http.MethodGet)
+			router.Handle(
+				"/materials",
+				s.AuthMiddleware("alchemist", "supervisor")(http.HandlerFunc(matHandler.GetAll)),
+			).Methods(http.MethodGet)
+			router.Handle(
+				"/materials/{id}",
+				s.AuthMiddleware("alchemist", "supervisor")(http.HandlerFunc(matHandler.GetByID)),
+			).Methods(http.MethodGet)
 			router.Handle("/materials",
 				s.AuthMiddleware("supervisor")(http.HandlerFunc(matHandler.Create)),
 			).Methods(http.MethodPost)
@@ -134,11 +162,18 @@ func (s *Server) router() http.Handler {
 		if s.AuditRepository != nil {
 			auditHandler := handlers.NewAuditHandler(
 				s.AuditRepository,
+				s.eventHub.Broadcast,
 				s.HandleError,
 				s.logger.Info,
 			)
-			router.HandleFunc("/audits", auditHandler.GetAll).Methods(http.MethodGet)
-			router.HandleFunc("/audits/{id}", auditHandler.GetByID).Methods(http.MethodGet)
+			router.Handle(
+				"/audits",
+				s.AuthMiddleware("supervisor")(http.HandlerFunc(auditHandler.GetAll)),
+			).Methods(http.MethodGet)
+			router.Handle(
+				"/audits/{id}",
+				s.AuthMiddleware("supervisor")(http.HandlerFunc(auditHandler.GetByID)),
+			).Methods(http.MethodGet)
 			router.Handle("/audits",
 				s.AuthMiddleware("supervisor")(http.HandlerFunc(auditHandler.Create)),
 			).Methods(http.MethodPost)

@@ -20,7 +20,9 @@ type TransmutationRepository struct {
 
 func (r *TransmutationRepository) FindPendingBefore(threshold time.Time) ([]*models.Transmutation, error) {
 	var ts []*models.Transmutation
-	err := r.db.Where("status = ? AND created_at < ?", "en_proceso", threshold).Find(&ts).Error
+	err := r.db.Where("status IN ? AND created_at < ?",
+		[]string{models.TransmutationStatusPending, models.TransmutationStatusProcessing}, threshold).
+		Find(&ts).Error
 	return ts, err
 }
 
@@ -47,6 +49,12 @@ func (r *TransmutationRepository) FindAll() ([]*models.Transmutation, error) {
 	return ts, err
 }
 
+func (r *TransmutationRepository) FindAllByUser(userID uint) ([]*models.Transmutation, error) {
+	var ts []*models.Transmutation
+	err := r.db.Where("user_id = ?", userID).Find(&ts).Error
+	return ts, err
+}
+
 func (r *TransmutationRepository) Create(t *models.Transmutation) (*models.Transmutation, error) {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		var material models.Material
@@ -63,6 +71,7 @@ func (r *TransmutationRepository) Create(t *models.Transmutation) (*models.Trans
 		if err := tx.Save(&material).Error; err != nil {
 			return err
 		}
+		t.Status = models.TransmutationStatusPending
 		if err := tx.Create(t).Error; err != nil {
 			return err
 		}

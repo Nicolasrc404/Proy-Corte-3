@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:8000";
+import { API_URL } from "../config";
 
 export async function apiFetch(
   path: string,
@@ -15,6 +15,18 @@ export async function apiFetch(
     body: body ? JSON.stringify(body) : undefined,
   });
   if (res.status === 204) return null;
-  const data = await res.json();
-  return data.data ?? data;
+
+  const contentType = res.headers.get("content-type") || "";
+  const isJSON = contentType.includes("application/json");
+  const data = isJSON ? await res.json() : await res.text();
+
+  if (!res.ok) {
+    const message =
+      typeof data === "string"
+        ? data
+        : data?.message || "Unexpected error from server";
+    throw new Error(message);
+  }
+
+  return typeof data === "string" ? data : data.data ?? data;
 }

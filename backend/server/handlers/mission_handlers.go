@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -16,7 +17,7 @@ import (
 type MissionHandler struct {
 	Repo             *repository.MissionRepository
 	Dispatcher       AsyncDispatcher
-	CurrentUser      func(*http.Request) string
+	CurrentUser      func(*http.Request) *api.AuthenticatedUser
 	ReportAsyncError func(string, error)
 	HandleErr        func(http.ResponseWriter, int, string, error)
 	Log              func(int, string, time.Time)
@@ -25,7 +26,7 @@ type MissionHandler struct {
 func NewMissionHandler(
 	repo *repository.MissionRepository,
 	dispatcher AsyncDispatcher,
-	currentUser func(*http.Request) string,
+	currentUser func(*http.Request) *api.AuthenticatedUser,
 	reportAsyncError func(string, error),
 	handleErr func(http.ResponseWriter, int, string, error),
 	log func(int, string, time.Time),
@@ -42,7 +43,9 @@ func NewMissionHandler(
 
 func (h *MissionHandler) userEmail(r *http.Request) string {
 	if h.CurrentUser != nil {
-		return h.CurrentUser(r)
+		if user := h.CurrentUser(r); user != nil {
+			return user.Email
+		}
 	}
 	return ""
 }
@@ -121,7 +124,7 @@ func (h *MissionHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Title:       req.Title,
 		Description: req.Description,
 		Difficulty:  req.Difficulty,
-		Status:      "pendiente",
+		Status:      models.MissionStatusPending,
 		AssignedTo:  req.AssignedTo,
 	}
 	m, err := h.Repo.Save(m)
@@ -130,7 +133,7 @@ func (h *MissionHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.Dispatcher != nil {
-		if err := h.Dispatcher.EnqueueAudit("create", "mission", m.ID, h.userEmail(r), "Creación de misión"); err != nil {
+		if err := h.Dispatcher.EnqueueAudit("mission_created", "mission", m.ID, h.userEmail(r), "Mission created"); err != nil {
 			h.ReportAsyncError(r.URL.Path, err)
 		}
 	}
@@ -172,7 +175,7 @@ func (h *MissionHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.Dispatcher != nil {
-		if err := h.Dispatcher.EnqueueAudit("delete", "mission", m.ID, h.userEmail(r), "Eliminación de misión"); err != nil {
+		if err := h.Dispatcher.EnqueueAudit("mission_deleted", "mission", m.ID, h.userEmail(r), "Mission deleted"); err != nil {
 			h.ReportAsyncError(r.URL.Path, err)
 		}
 	}
@@ -212,6 +215,7 @@ func (h *MissionHandler) Edit(w http.ResponseWriter, r *http.Request) {
 	if req.Difficulty != nil {
 		m.Difficulty = *req.Difficulty
 	}
+	prevStatus := m.Status
 	if req.Status != nil {
 		m.Status = *req.Status
 	}
@@ -225,7 +229,13 @@ func (h *MissionHandler) Edit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.Dispatcher != nil {
-		if err := h.Dispatcher.EnqueueAudit("update", "mission", m.ID, h.userEmail(r), "Actualización de misión"); err != nil {
+		action := "mission_updated"
+		details := "Mission updated"
+		if prevStatus != m.Status && strings.EqualFold(m.Status, models.MissionStatusCompleted) {
+			action = "mission_closed"
+			details = "Mission marked as completed"
+		}
+		if err := h.Dispatcher.EnqueueAudit(action, "mission", m.ID, h.userEmail(r), details); err != nil {
 			h.ReportAsyncError(r.URL.Path, err)
 		}
 	}
