@@ -21,6 +21,7 @@ func (s *Server) router() http.Handler {
 	authHandler := handlers.NewAuthHandler(
 		s.GetJWTSecret(),
 		s.UserRepository,
+		s.AlchemistRepository,
 		dispatcher,
 		s.HandleError,
 		s.logger.Info,
@@ -87,6 +88,9 @@ func (s *Server) router() http.Handler {
 			router.Handle("/missions/{id}",
 				s.AuthMiddleware("supervisor")(http.HandlerFunc(mh.Edit)), // <- NUEVO PUT
 			).Methods(http.MethodPut)
+			router.Handle("/missions/{id}/status",
+				s.AuthMiddleware("alchemist", "supervisor")(http.HandlerFunc(mh.UpdateStatus)),
+			).Methods(http.MethodPatch)
 			router.Handle("/missions/{id}",
 				s.AuthMiddleware("supervisor")(http.HandlerFunc(mh.Delete)),
 			).Methods(http.MethodDelete)

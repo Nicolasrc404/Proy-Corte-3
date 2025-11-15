@@ -12,12 +12,12 @@ docker compose up --build
 
 ### Variables y servicios principales
 
-| Servicio    | Puerto local | Notas |
-|-------------|--------------|-------|
-| Backend Go  | `8000`       | Expuesto desde `backend/server` con Gorilla Mux. |
-| Frontend    | `3000`       | Aplicación React + Vite, sirve el panel por roles. |
-| PostgreSQL  | `5432`       | Base de datos `backend-avanzada-1`. |
-| Redis       | `6379`       | Cola de tareas para el worker asíncrono. |
+| Servicio   | Puerto local | Notas                                              |
+| ---------- | ------------ | -------------------------------------------------- |
+| Backend Go | `8000`       | Expuesto desde `backend/server` con Gorilla Mux.   |
+| Frontend   | `3000`       | Aplicación React + Vite, sirve el panel por roles. |
+| PostgreSQL | `5432`       | Base de datos `backend-avanzada-1`.                |
+| Redis      | `6379`       | Cola de tareas para el worker asíncrono.           |
 
 El backend requiere las variables (ya definidas en `docker-compose.yml`):
 
@@ -35,11 +35,11 @@ docker compose exec -T postgres psql -U postgres -d backend-avanzada-1 < init.sq
 
 Credenciales listas para usar:
 
-| Rol         | Email                     | Contraseña     |
-|-------------|---------------------------|----------------|
-| Supervisor  | `selene@alquimia.test`    | `alquimia123`  |
-| Alquimista  | `aurelia@alquimia.test`   | `alquimia123`  |
-| Alquimista  | `benedict@alquimia.test`  | `alquimia123`  |
+| Rol        | Email                    | Contraseña    |
+| ---------- | ------------------------ | ------------- |
+| Supervisor | `selene@alquimia.test`   | `alquimia123` |
+| Alquimista | `aurelia@alquimia.test`  | `alquimia123` |
+| Alquimista | `benedict@alquimia.test` | `alquimia123` |
 
 Puedes registrar nuevos usuarios desde `/auth/register` en el frontend o consumiendo el endpoint `POST /auth/register`.
 
@@ -119,5 +119,3 @@ frontend/
     context/     -> Manejo del JWT y sesión de usuario
     services/    -> Cliente API con manejo de errores y token
 ```
-
-¡Listo! Con el stack levantado podrás probar el flujo completo de registro, asignación de misiones, creación de transmutaciones y monitoreo por auditorías en tiempo real.

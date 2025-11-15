@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
 import TableList from "../components/TableList";
 import { apiFetch } from "../services/api";
@@ -16,6 +16,7 @@ const STATUS_OPTIONS = [
 export default function Missions() {
   const { token, user } = useAuth();
   const isSupervisor = user?.role === "supervisor";
+  const isAlchemist = user?.role === "alchemist";
   const [missions, setMissions] = useState<Mission[]>([]);
   const [form, setForm] = useState<Mission>({
     title: "",
@@ -26,12 +27,26 @@ export default function Missions() {
   });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [statusDrafts, setStatusDrafts] = useState<
+    Record<number, Mission["status"]>
+  >({});
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
+
+  const statusLabels = useMemo(
+    () =>
+      STATUS_OPTIONS.reduce<Record<string, string>>((acc, option) => {
+        acc[option.value] = option.label;
+        return acc;
+      }, {}),
+    []
+  );
 
   const loadData = async () => {
     if (!token) return;
     try {
       const res = await apiFetch("/missions", "GET", undefined, token);
       setMissions(res || []);
+      setStatusDrafts({});
     } catch (err) {
       console.error("Error al cargar misiones", err);
     }
@@ -97,6 +112,30 @@ export default function Missions() {
     if (!confirm("¿Seguro que quieres eliminar esta misión?")) return;
     await apiFetch(`/missions/${id}`, "DELETE", undefined, token);
     await loadData();
+  };
+
+  const handleStatusDraftChange = (id: number, value: Mission["status"]) => {
+    setStatusDrafts((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleStatusUpdate = async (mission: Mission) => {
+    if (!token || !mission.id) return;
+    const nextStatus = statusDrafts[mission.id] ?? mission.status ?? "PENDING";
+    if (nextStatus === mission.status) return;
+    try {
+      setUpdatingId(mission.id);
+      await apiFetch(
+        `/missions/${mission.id}/status`,
+        "PATCH",
+        { status: nextStatus },
+        token
+      );
+      await loadData();
+    } catch (err) {
+      console.error("No se pudo actualizar el estado de la misión", err);
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   return (
@@ -207,14 +246,56 @@ export default function Missions() {
               "status",
               "assigned_to",
             ]}
-            data={missions.map((mission) => ({
-              ...mission,
-              status:
-                STATUS_OPTIONS.find((opt) => opt.value === mission.status)
-                  ?.label || mission.status,
-            }))}
+            data={missions}
+            formatters={{
+              status: (value: Mission["status"]) =>
+                value
+                  ? statusLabels[String(value)] || String(value)
+                  : "Sin estado",
+            }}
             onEdit={isSupervisor ? handleEdit : undefined}
             onDelete={isSupervisor ? handleDelete : undefined}
+            renderActions={
+              isAlchemist
+                ? (row: Mission) => {
+                    if (!row.id) return null;
+                    const selected =
+                      statusDrafts[row.id] ?? row.status ?? "PENDING";
+                    const changed = selected !== row.status;
+                    return (
+                      <div className="flex items-center gap-2">
+                        <select
+                          className="border rounded p-1 text-sm"
+                          value={selected}
+                          onChange={(e) =>
+                            handleStatusDraftChange(
+                              row.id!,
+                              e.target.value as Mission["status"]
+                            )
+                          }
+                        >
+                          {STATUS_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => handleStatusUpdate(row)}
+                          disabled={!changed || updatingId === row.id}
+                          className={`px-3 py-1 rounded text-white text-sm transition-colors ${
+                            !changed || updatingId === row.id
+                              ? "bg-gray-400 cursor-not-allowed"
+                              : "bg-green-600 hover:bg-green-700"
+                          }`}
+                        >
+                          {updatingId === row.id ? "Guardando..." : "Guardar"}
+                        </button>
+                      </div>
+                    );
+                  }
+                : undefined
+            }
           />
         </div>
       </div>

@@ -1,8 +1,12 @@
+import { ReactNode } from "react";
+
 interface TableProps {
   columns: string[];
   data: any[];
   onEdit?: (item: any) => void;
   onDelete?: (id: number) => void;
+  formatters?: Record<string, (value: any, row: any) => ReactNode>;
+  renderActions?: (row: any) => ReactNode;
 }
 
 export default function TableList({
@@ -10,8 +14,10 @@ export default function TableList({
   data,
   onEdit,
   onDelete,
+  formatters,
+  renderActions,
 }: TableProps) {
-  const showActions = Boolean(onEdit || onDelete);
+  const showActions = Boolean(onEdit || onDelete || renderActions);
   return (
     <table className="w-full border mt-4 text-sm">
       <thead className="bg-gray-200">
@@ -29,11 +35,12 @@ export default function TableList({
           <tr key={row.id} className="border-b hover:bg-gray-50">
             {columns.map((col) => (
               <td key={col} className="p-2 border">
-                {row[col]}
+                {formatters?.[col] ? formatters[col](row[col], row) : row[col]}
               </td>
             ))}
             {showActions && (
-              <td className="p-2 flex gap-2">
+              <td className="p-2 flex gap-2 items-center flex-wrap">
+                {renderActions && renderActions(row)}
                 {onEdit && (
                   <button
                     onClick={() => onEdit(row)}

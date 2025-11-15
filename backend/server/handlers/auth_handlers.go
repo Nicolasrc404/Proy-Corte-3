@@ -25,25 +25,28 @@ type AuthClaims struct {
 
 // Handler principal
 type AuthHandler struct {
-	UserRepository repository.UserRepository
-	Dispatcher     AsyncDispatcher
-	Logger         func(status int, path string, start time.Time)
-	HandleError    func(w http.ResponseWriter, statusCode int, path string, cause error)
-	JWTSecret      string
+	UserRepository      repository.UserRepository
+	AlchemistRepository *repository.AlchemistRepository
+	Dispatcher          AsyncDispatcher
+	Logger              func(status int, path string, start time.Time)
+	HandleError         func(w http.ResponseWriter, statusCode int, path string, cause error)
+	JWTSecret           string
 }
 
 // Constructor
 func NewAuthHandler(jwtSecret string, ur repository.UserRepository,
+	alchemistRepo *repository.AlchemistRepository,
 	dispatcher AsyncDispatcher,
 	handleError func(w http.ResponseWriter, statusCode int, path string, cause error),
 	logger func(status int, path string, start time.Time)) *AuthHandler {
 
 	return &AuthHandler{
-		UserRepository: ur,
-		Dispatcher:     dispatcher,
-		JWTSecret:      jwtSecret,
-		HandleError:    handleError,
-		Logger:         logger,
+		UserRepository:      ur,
+		AlchemistRepository: alchemistRepo,
+		Dispatcher:          dispatcher,
+		JWTSecret:           jwtSecret,
+		HandleError:         handleError,
+		Logger:              logger,
 	}
 }
 
@@ -104,6 +107,19 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.HandleError(w, http.StatusInternalServerError, r.URL.Path, err)
 		return
+	}
+
+	if req.Role == "alchemist" && h.AlchemistRepository != nil {
+		alchemist := &models.Alchemist{
+			Name:      u.Name,
+			Age:       0,
+			Specialty: u.Specialty,
+			Rank:      "APPRENTICE",
+		}
+		if _, err := h.AlchemistRepository.Save(alchemist); err != nil {
+			h.HandleError(w, http.StatusInternalServerError, r.URL.Path, err)
+			return
+		}
 	}
 
 	if h.Dispatcher != nil {

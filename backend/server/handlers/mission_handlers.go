@@ -23,6 +23,19 @@ type MissionHandler struct {
 	Log              func(int, string, time.Time)
 }
 
+var allowedMissionStatuses = map[string]struct{}{
+	models.MissionStatusPending:    {},
+	models.MissionStatusInProgress: {},
+	models.MissionStatusCompleted:  {},
+	models.MissionStatusArchived:   {},
+}
+
+func normalizeMissionStatus(raw string) (string, bool) {
+	normalized := strings.ToUpper(strings.TrimSpace(raw))
+	_, ok := allowedMissionStatuses[normalized]
+	return normalized, ok
+}
+
 func NewMissionHandler(
 	repo *repository.MissionRepository,
 	dispatcher AsyncDispatcher,
@@ -249,6 +262,89 @@ func (h *MissionHandler) Edit(w http.ResponseWriter, r *http.Request) {
 		AssignedTo:  m.AssignedTo,
 		CreatedAt:   m.CreatedAt.Format(time.RFC3339),
 	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(w).Encode(map[string]any{"data": resp})
+	h.Log(http.StatusAccepted, r.URL.Path, start)
+}
+
+func (h *MissionHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	id, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		h.HandleErr(w, http.StatusBadRequest, r.URL.Path, err)
+		return
+	}
+
+	mission, err := h.Repo.FindById(id)
+	if err != nil {
+		h.HandleErr(w, http.StatusInternalServerError, r.URL.Path, err)
+		return
+	}
+	if mission == nil {
+		h.HandleErr(w, http.StatusNotFound, r.URL.Path, errors.New("mission not found"))
+		return
+	}
+
+	var req api.MissionStatusUpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.HandleErr(w, http.StatusBadRequest, r.URL.Path, err)
+		return
+	}
+
+	newStatus, ok := normalizeMissionStatus(req.Status)
+	if !ok {
+		h.HandleErr(w, http.StatusBadRequest, r.URL.Path, errors.New("invalid status value"))
+		return
+	}
+
+	if mission.Status == newStatus {
+		resp := &api.MissionResponseDto{
+			ID:          int(mission.ID),
+			Title:       mission.Title,
+			Description: mission.Description,
+			Difficulty:  mission.Difficulty,
+			Status:      mission.Status,
+			AssignedTo:  mission.AssignedTo,
+			CreatedAt:   mission.CreatedAt.Format(time.RFC3339),
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"data": resp})
+		h.Log(http.StatusOK, r.URL.Path, start)
+		return
+	}
+
+	previous := mission.Status
+	mission.Status = newStatus
+
+	mission, err = h.Repo.Save(mission)
+	if err != nil {
+		h.HandleErr(w, http.StatusInternalServerError, r.URL.Path, err)
+		return
+	}
+
+	if h.Dispatcher != nil {
+		action := "mission_status_changed"
+		details := "Mission status updated"
+		if newStatus == models.MissionStatusCompleted && previous != models.MissionStatusCompleted {
+			action = "mission_closed"
+			details = "Mission marked as completed"
+		}
+		if err := h.Dispatcher.EnqueueAudit(action, "mission", mission.ID, h.userEmail(r), details); err != nil {
+			h.ReportAsyncError(r.URL.Path, err)
+		}
+	}
+
+	resp := &api.MissionResponseDto{
+		ID:          int(mission.ID),
+		Title:       mission.Title,
+		Description: mission.Description,
+		Difficulty:  mission.Difficulty,
+		Status:      mission.Status,
+		AssignedTo:  mission.AssignedTo,
+		CreatedAt:   mission.CreatedAt.Format(time.RFC3339),
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(w).Encode(map[string]any{"data": resp})
