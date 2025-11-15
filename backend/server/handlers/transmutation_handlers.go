@@ -54,20 +54,32 @@ func (h *TransmutationHandler) Create(w http.ResponseWriter, r *http.Request) {
 		h.HandleErr(w, http.StatusBadRequest, r.URL.Path, err)
 		return
 	}
-	if req.AlchemistID == 0 || req.MaterialID == 0 {
+	if req.UserID == 0 || req.MaterialID == 0 {
 		h.HandleErr(w, http.StatusBadRequest, r.URL.Path, errors.New("invalid IDs"))
+		return
+	}
+	if req.Quantity <= 0 {
+		h.HandleErr(w, http.StatusBadRequest, r.URL.Path, errors.New("quantity must be greater than zero"))
 		return
 	}
 
 	t := &models.Transmutation{
-		AlchemistID: req.AlchemistID,
-		MaterialID:  req.MaterialID,
-		Formula:     req.Formula,
-		Status:      "en_proceso",
+		UserID:     req.UserID,
+		MaterialID: req.MaterialID,
+		Formula:    req.Formula,
+		Quantity:   req.Quantity,
+		Status:     "en_proceso",
 	}
-	t, err := h.Repo.Save(t)
+	t, err := h.Repo.Create(t)
 	if err != nil {
-		h.HandleErr(w, http.StatusInternalServerError, r.URL.Path, err)
+		switch {
+		case errors.Is(err, repository.ErrMaterialNotFound):
+			h.HandleErr(w, http.StatusBadRequest, r.URL.Path, errors.New("material not found"))
+		case errors.Is(err, repository.ErrInsufficientMaterial):
+			h.HandleErr(w, http.StatusBadRequest, r.URL.Path, errors.New("insufficient material quantity"))
+		default:
+			h.HandleErr(w, http.StatusInternalServerError, r.URL.Path, err)
+		}
 		return
 	}
 
@@ -81,12 +93,13 @@ func (h *TransmutationHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := &api.TransmutationResponseDto{
-		ID:          int(t.ID),
-		AlchemistID: t.AlchemistID,
-		MaterialID:  t.MaterialID,
-		Status:      t.Status,
-		Result:      t.Result,
-		CreatedAt:   t.CreatedAt.Format(time.RFC3339),
+		ID:         int(t.ID),
+		UserID:     t.UserID,
+		MaterialID: t.MaterialID,
+		Quantity:   t.Quantity,
+		Status:     t.Status,
+		Result:     t.Result,
+		CreatedAt:  t.CreatedAt.Format(time.RFC3339),
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -104,12 +117,13 @@ func (h *TransmutationHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	resp := []*api.TransmutationResponseDto{}
 	for _, t := range transmutations {
 		resp = append(resp, &api.TransmutationResponseDto{
-			ID:          int(t.ID),
-			AlchemistID: t.AlchemistID,
-			MaterialID:  t.MaterialID,
-			Status:      t.Status,
-			Result:      t.Result,
-			CreatedAt:   t.CreatedAt.Format(time.RFC3339),
+			ID:         int(t.ID),
+			UserID:     t.UserID,
+			MaterialID: t.MaterialID,
+			Quantity:   t.Quantity,
+			Status:     t.Status,
+			Result:     t.Result,
+			CreatedAt:  t.CreatedAt.Format(time.RFC3339),
 		})
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -134,12 +148,13 @@ func (h *TransmutationHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp := &api.TransmutationResponseDto{
-		ID:          int(t.ID),
-		AlchemistID: t.AlchemistID,
-		MaterialID:  t.MaterialID,
-		Status:      t.Status,
-		Result:      t.Result,
-		CreatedAt:   t.CreatedAt.Format(time.RFC3339),
+		ID:         int(t.ID),
+		UserID:     t.UserID,
+		MaterialID: t.MaterialID,
+		Quantity:   t.Quantity,
+		Status:     t.Status,
+		Result:     t.Result,
+		CreatedAt:  t.CreatedAt.Format(time.RFC3339),
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"data": resp})
@@ -222,12 +237,13 @@ func (h *TransmutationHandler) Edit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := &api.TransmutationResponseDto{
-		ID:          int(t.ID),
-		AlchemistID: t.AlchemistID,
-		MaterialID:  t.MaterialID,
-		Status:      t.Status,
-		Result:      t.Result,
-		CreatedAt:   t.CreatedAt.Format(time.RFC3339),
+		ID:         int(t.ID),
+		UserID:     t.UserID,
+		MaterialID: t.MaterialID,
+		Quantity:   t.Quantity,
+		Status:     t.Status,
+		Result:     t.Result,
+		CreatedAt:  t.CreatedAt.Format(time.RFC3339),
 	}
 
 	w.Header().Set("Content-Type", "application/json")

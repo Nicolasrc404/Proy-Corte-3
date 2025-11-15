@@ -10,8 +10,9 @@ export default function Transmutations() {
   const { token } = useAuth();
   const [transmutations, setTransmutations] = useState<Transmutation[]>([]);
   const [form, setForm] = useState<Transmutation>({
-    alchemist_id: 0,
+    user_id: 0,
     material_id: 0,
+    quantity: 0,
     formula: "",
     result: "",
   });
@@ -34,15 +35,22 @@ export default function Transmutations() {
     } else {
       await apiFetch("/transmutations", "POST", form, token!);
     }
-    setForm({ alchemist_id: 0, material_id: 0, formula: "", result: "" });
+    setForm({
+      user_id: 0,
+      material_id: 0,
+      quantity: 0,
+      formula: "",
+      result: "",
+    });
     await loadData();
   };
 
   const handleEdit = (item: Transmutation) => {
     setEditingId(item.id!);
     setForm({
-      alchemist_id: item.alchemist_id,
+      user_id: item.user_id,
       material_id: item.material_id,
+      quantity: item.quantity,
       formula: item.formula || "",
       result: item.result || "",
     });
@@ -70,11 +78,11 @@ export default function Transmutations() {
         >
           <input
             type="number"
-            placeholder="ID del Alquimista"
+            placeholder="ID del Usuario"
             className="border p-2 rounded"
-            value={form.alchemist_id}
+            value={form.user_id}
             onChange={(e) =>
-              setForm({ ...form, alchemist_id: parseInt(e.target.value) })
+              setForm({ ...form, user_id: parseInt(e.target.value) || 0 })
             }
             required
           />
@@ -84,7 +92,19 @@ export default function Transmutations() {
             className="border p-2 rounded"
             value={form.material_id}
             onChange={(e) =>
-              setForm({ ...form, material_id: parseInt(e.target.value) })
+              setForm({ ...form, material_id: parseInt(e.target.value) || 0 })
+            }
+            required
+          />
+          <input
+            type="number"
+            placeholder="Cantidad utilizada"
+            className="border p-2 rounded"
+            value={form.quantity}
+            min={0}
+            step="0.01"
+            onChange={(e) =>
+              setForm({ ...form, quantity: parseFloat(e.target.value) || 0 })
             }
             required
           />
@@ -113,7 +133,14 @@ export default function Transmutations() {
 
         {/* Tabla */}
         <TableList
-          columns={["id", "alchemist_id", "material_id", "status", "result"]}
+          columns={[
+            "id",
+            "user_id",
+            "material_id",
+            "quantity",
+            "status",
+            "result",
+          ]}
           data={transmutations}
           onEdit={handleEdit}
           onDelete={handleDelete}

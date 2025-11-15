@@ -52,8 +52,9 @@ export interface Material {
 
 export interface Transmutation {
   id?: number;
-  alchemist_id: number;
+  user_id: number;
   material_id: number;
+  quantity: number;
   formula?: string;
   status?: "en_proceso" | "completada" | "fallida" | string;
   result?: string;
