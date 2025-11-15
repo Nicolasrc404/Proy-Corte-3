@@ -13,15 +13,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Estructura que representa los claims del token JWT.
-// Se define localmente para no depender del paquete server.
+// Claims del JWT
 type AuthClaims struct {
 	Email string `json:"email"`
 	Role  string `json:"role"`
 	jwt.RegisteredClaims
 }
 
-// AuthHandler gestiona login y registro de usuarios.
+// Handler principal
 type AuthHandler struct {
 	UserRepository repository.UserRepository
 	Logger         func(status int, path string, start time.Time)
@@ -29,7 +28,7 @@ type AuthHandler struct {
 	JWTSecret      string
 }
 
-// Constructor del handler (inyección de dependencias)
+// Constructor
 func NewAuthHandler(jwtSecret string, ur repository.UserRepository,
 	handleError func(w http.ResponseWriter, statusCode int, path string, cause error),
 	logger func(status int, path string, start time.Time)) *AuthHandler {
@@ -42,18 +41,26 @@ func NewAuthHandler(jwtSecret string, ur repository.UserRepository,
 	}
 }
 
-// Registro de nuevo usuario
+//////////////////////////////////////////////////////
+// REGISTRO
+//////////////////////////////////////////////////////
+
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req api.RegisterRequest
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.HandleError(w, http.StatusBadRequest, r.URL.Path, err)
 		return
 	}
-	if req.Email == "" || req.Password == "" || req.Role == "" {
-		h.HandleError(w, http.StatusBadRequest, r.URL.Path, errors.New("email, password and role are required"))
+
+	// Validar campos
+	if req.Name == "" || req.Specialty == "" || req.Email == "" || req.Password == "" || req.Role == "" {
+		h.HandleError(w, http.StatusBadRequest, r.URL.Path,
+			errors.New("name, specialty, email, password and role are required"))
 		return
 	}
 
+	// Verificar si ya existe el email
 	exists, err := h.UserRepository.FindByEmail(req.Email)
 	if err != nil {
 		h.HandleError(w, http.StatusInternalServerError, r.URL.Path, err)
@@ -64,28 +71,49 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Encriptar contraseña
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		h.HandleError(w, http.StatusInternalServerError, r.URL.Path, err)
 		return
 	}
 
+	// Crear el usuario
 	u := &models.User{
+		Name:         req.Name,
+		Specialty:    req.Specialty,
 		Email:        req.Email,
 		PasswordHash: string(hash),
 		Role:         req.Role,
 	}
-	if _, err := h.UserRepository.Save(u); err != nil {
+
+	_, err = h.UserRepository.Save(u)
+	if err != nil {
 		h.HandleError(w, http.StatusInternalServerError, r.URL.Path, err)
 		return
 	}
 
+	// RESPUESTA COMPLETA DEL REGISTRO
+	resp := api.AuthResponse{
+		ID:        u.ID,
+		Name:      u.Name,
+		Specialty: u.Specialty,
+		Email:     u.Email,
+		Role:      u.Role,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(resp)
 }
 
-// Inicio de sesión
+//////////////////////////////////////////////////////
+// LOGIN
+//////////////////////////////////////////////////////
+
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req api.LoginRequest
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.HandleError(w, http.StatusBadRequest, r.URL.Path, err)
 		return
@@ -106,6 +134,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Crear token JWT
 	now := time.Now()
 	claims := &AuthClaims{
 		Email: u.Email,
@@ -124,7 +153,16 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := api.AuthResponse{Token: tokenString}
+	// RESPUESTA COMPLETA DEL LOGIN
+	resp := api.AuthResponse{
+		Token:     tokenString,
+		ID:        u.ID,
+		Name:      u.Name,
+		Specialty: u.Specialty,
+		Email:     u.Email,
+		Role:      u.Role,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }
