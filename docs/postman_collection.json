@@ -21,17 +21,19 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Aurelia Stone\",\n  \"specialty\": \"Transmutaciones Vegetales\",\n  \"email\": \"aurelia@alquimia.test\",\n  \"password\": \"alquimia123\",\n  \"role\": \"alchemist\"\n}"
+              "raw": "{\n  \"name\": \"Catalina Vey\",\n  \"specialty\": \"Resonancias Áureas\",\n  \"email\": \"catalina.vey@alquimia.dev\",\n  \"password\": \"claveAlquimica!23\",\n  \"role\": \"alchemist\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/auth/register",
+              "raw": "http://localhost:8000/auth/register",
               "host": [
-                "{{baseUrl}}"
+                "localhost"
               ],
               "path": [
                 "auth",
                 "register"
-              ]
+              ],
+              "protocol": "http",
+              "port": "8000"
             }
           }
         },
@@ -47,17 +49,19 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"selene@alquimia.test\",\n  \"password\": \"alquimia123\"\n}"
+              "raw": "{\n  \"email\": \"catalina.vey@alquimia.dev\",\n  \"password\": \"claveAlquimica!23\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/auth/login",
+              "raw": "http://localhost:8000/auth/login",
               "host": [
-                "{{baseUrl}}"
+                "localhost"
               ],
               "path": [
                 "auth",
                 "login"
-              ]
+              ],
+              "protocol": "http",
+              "port": "8000"
             }
           }
         }
@@ -77,13 +81,15 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/alchemists",
+              "raw": "http://localhost:8000/alchemists",
               "host": [
-                "{{baseUrl}}"
+                "localhost"
               ],
               "path": [
                 "alchemists"
-              ]
+              ],
+              "protocol": "http",
+              "port": "8000"
             }
           }
         },
@@ -106,13 +112,15 @@
               "raw": "{\n  \"name\": \"Lyra Nox\",\n  \"age\": 22,\n  \"specialty\": \"Ilusiones\",\n  \"rank\": \"Aprendiz\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/alchemists",
+              "raw": "http://localhost:8000/alchemists",
               "host": [
-                "{{baseUrl}}"
+                "localhost"
               ],
               "path": [
                 "alchemists"
-              ]
+              ],
+              "protocol": "http",
+              "port": "8000"
             }
           }
         }
@@ -132,13 +140,15 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/missions",
+              "raw": "http://localhost:8000/missions",
               "host": [
-                "{{baseUrl}}"
+                "localhost"
               ],
               "path": [
                 "missions"
-              ]
+              ],
+              "protocol": "http",
+              "port": "8000"
             }
           }
         },
@@ -158,16 +168,18 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Nueva misión\",\n  \"description\": \"Detalles de la misión\",\n  \"difficulty\": \"HIGH\",\n  \"status\": \"PENDING\",\n  \"assigned_to\": 1\n}"
+              "raw": "{\n  \"title\": \"Encapsular el Vórtice Boreal\",\n  \"description\": \"Contener la anomalía áurica detectada al norte del observatorio.\",\n  \"difficulty\": \"HIGH\",\n  \"status\": \"PENDING\",\n  \"assigned_to\": 4\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/missions",
+              "raw": "http://localhost:8000/missions",
               "host": [
-                "{{baseUrl}}"
+                "localhost"
               ],
               "path": [
                 "missions"
-              ]
+              ],
+              "protocol": "http",
+              "port": "8000"
             }
           }
         }
@@ -187,13 +199,15 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/materials",
+              "raw": "http://localhost:8000/materials",
               "host": [
-                "{{baseUrl}}"
+                "localhost"
               ],
               "path": [
                 "materials"
-              ]
+              ],
+              "protocol": "http",
+              "port": "8000"
             }
           }
         },
@@ -216,13 +230,15 @@
               "raw": "{\n  \"name\": \"Esencia Lunar\",\n  \"category\": \"Catalizadores\",\n  \"quantity\": 12.5\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/materials",
+              "raw": "http://localhost:8000/materials",
               "host": [
-                "{{baseUrl}}"
+                "localhost"
               ],
               "path": [
                 "materials"
-              ]
+              ],
+              "protocol": "http",
+              "port": "8000"
             }
           }
         }
@@ -242,13 +258,15 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/transmutations",
+              "raw": "http://localhost:8000/transmutations",
               "host": [
-                "{{baseUrl}}"
+                "localhost"
               ],
               "path": [
                 "transmutations"
-              ]
+              ],
+              "protocol": "http",
+              "port": "8000"
             }
           }
         },
@@ -268,16 +286,18 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"material_id\": 1,\n  \"formula\": \"Hg -> Au\",\n  \"quantity\": 5\n}"
+              "raw": "{\n  \"material_id\": 5,\n  \"formula\": \"Cu + Eco Áurico -> Filamentos Prisma\",\n  \"quantity\": 7.5\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/transmutations",
+              "raw": "http://localhost:8000/transmutations",
               "host": [
-                "{{baseUrl}}"
+                "localhost"
               ],
               "path": [
                 "transmutations"
-              ]
+              ],
+              "protocol": "http",
+              "port": "8000"
             }
           }
         }
@@ -297,13 +317,15 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/audits",
+              "raw": "http://localhost:8000/audits",
               "host": [
-                "{{baseUrl}}"
+                "localhost"
               ],
               "path": [
                 "audits"
-              ]
+              ],
+              "protocol": "http",
+              "port": "8000"
             }
           }
         }
@@ -318,9 +340,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/events?token={{token}}",
+              "raw": "http://localhost:8000/events?token={{token}}",
               "host": [
-                "{{baseUrl}}"
+                "localhost"
               ],
               "path": [
                 "events"
@@ -330,7 +352,9 @@
                   "key": "token",
                   "value": "{{token}}"
                 }
-              ]
+              ],
+              "protocol": "http",
+              "port": "8000"
             }
           }
         }
@@ -338,10 +362,6 @@
     }
   ],
   "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:8080"
-    },
     {
       "key": "token",
       "value": ""
